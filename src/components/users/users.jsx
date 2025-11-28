@@ -50,7 +50,7 @@ const UserCrud = () => {
   ]
 
   // Semestres
-  const semestres = Array.from({ length: 10 }, (_, i) => (i + 1).toString())
+  const semestres = Array.from({ length: 8 }, (_, i) => (i + 1).toString())
 
   // carga inicial de usuarios
   useEffect(() => {
@@ -193,7 +193,7 @@ const UserCrud = () => {
       <CCardHeader>
         <CRow className="align-items-center">
           <CCol>
-            <h4 className="mb-0">Gestión de Estudiantes Universitarios</h4>
+            <h4 className="mb-0">Lista de Estudiantes Universitarios</h4>
           </CCol>
           <CCol xs="auto">
             <CFormInput
