@@ -8,24 +8,20 @@ import {
   CButton,
   CListGroup,
   CListGroupItem,
-  // Se añade CBadge para hacer más interactivo el autor
   CBadge,
 } from '@coreui/react'
 
-// --- CONSTANTES ---
-// Lista de palabras que serán censuradas
-const BANNED_WORDS = ['tonto', 'idiota', 'estúpido', 'perro', 'puta', 'gay'] // Puedo añadir más palabras
+// palabras censuradas
+const BANNED_WORDS = ['tonto', 'idiota', 'estúpido', 'perro', 'puto', 'gay', 'liander']
 
 // Lista de emojis
-const emojis = ['😀', '😂', '😍', '🥳', '😢', '👍', '🙏']
+const emojis = ['😀', '😂', '😍', '🥳', '👍', '💡', '🔥']
 
 // --- FUNCIONES DE UTILIDAD ---
 const censorMessage = (content) => {
   let censored = content
   BANNED_WORDS.forEach((word) => {
-    // Expresión regular global e insensible a mayúsculas/minúsculas
     const regex = new RegExp(word, 'gi')
-    // Reemplaza la palabra por asteriscos, manteniendo la longitud
     const replacement = '*'.repeat(word.length)
     censored = censored.replace(regex, replacement)
   })
@@ -33,33 +29,31 @@ const censorMessage = (content) => {
 }
 
 const ForumCrud = () => {
-  // Referencia al contenedor de mensajes para el autoscroll
   const messagesEndRef = useRef(null)
+  const textareaRef = useRef(null)
 
   const [discussions, setDiscussions] = useState([
     {
       id: 1,
       author: 'Admin',
-      content: '¡Bienvenidos al foro! 🎉 No se permiten palabras obscenas.',
+      content: '¡Bienvenidos al foro! 🎉 Participa con respeto.',
       timestamp: new Date().toLocaleTimeString(),
-    },
-    {
-      id: 2,
-      author: 'You',
-      content:
-        'Este es un mensaje con una palabra obsceno. Quiero decir, este es un mensaje con una palabra *******.',
-      timestamp: new Date().toLocaleTimeString(),
+      likes: 0, // Nueva propiedad para interactividad
     },
   ])
   const [message, setMessage] = useState('')
-  const textareaRef = useRef(null)
 
-  // Efecto para hacer scroll al final de la discusión cada vez que se actualiza
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [discussions])
 
-  // Maneja inserción de emoji en la posición actual del cursor
+  // --- NUEVA LÓGICA: MANEJO DE REACCIONES ---
+  const handleLike = (id) => {
+    setDiscussions(discussions.map(msg => 
+      msg.id === id ? { ...msg, likes: (msg.likes || 0) + 1 } : msg
+    ))
+  }
+
   const addEmoji = (emoji) => {
     const el = textareaRef.current
     const start = el.selectionStart
@@ -67,138 +61,145 @@ const ForumCrud = () => {
     const newText = message.substring(0, start) + emoji + message.substring(end, message.length)
     setMessage(newText)
     setTimeout(() => {
-      // Posiciona el cursor después del emoji insertado
       el.selectionStart = el.selectionEnd = start + emoji.length
       el.focus()
     }, 0)
   }
 
   const handleDeleteMessage = (id) => {
-    // Solo elimina si el usuario confirma
     if (window.confirm('¿Estás seguro de que quieres eliminar este mensaje?')) {
       setDiscussions(discussions.filter((msg) => msg.id !== id))
     }
   }
 
-  // Se extrae la lógica de publicación para ser llamada por handleSubmit y handleKeyDown
   const postMessage = () => {
     const rawMessage = message.trim()
-    if (!rawMessage) return
+    if (!rawMessage || rawMessage.length > 255) return
 
-    // 1. Aplicar la censura
     const safeContent = censorMessage(rawMessage)
 
     const newMsg = {
-      id: discussions.length > 0 ? discussions[discussions.length - 1].id + 1 : 1,
-      author: 'You', // Autor fijo para diferenciar
+      id: Date.now(), // ID más confiable
+      author: 'You',
       content: safeContent,
       timestamp: new Date().toLocaleTimeString(),
+      likes: 0,
     }
 
     setDiscussions([...discussions, newMsg])
     setMessage('')
   }
 
-  // Función principal llamada al enviar el formulario (por el botón)
   const handleSubmit = (e) => {
     e.preventDefault()
     postMessage()
   }
 
-  // **NUEVA FUNCIÓN** para manejar la pulsación de teclas
   const handleKeyDown = (e) => {
-    // Si se presiona Enter Y NO se está presionando Shift
     if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault() // Previene el salto de línea por defecto
-      postMessage() // Llama a la función de publicación
+      e.preventDefault()
+      postMessage()
     }
-    // Si se presiona Shift + Enter, el comportamiento por defecto (salto de línea) se mantiene
   }
 
   return (
-    <CCard>
-      <CCardHeader>💬 Foro de Discusiones Interactivo</CCardHeader>
-      <CCardBody>
-        {/* Contenedor de Mensajes (manteniendo la corrección de word-break) */}
+    <CCard className="shadow-lg border-0">
+      <CCardHeader className="bg-primary text-white d-flex align-items-center">
+        <span style={{ fontSize: '1.2rem' }}>💬</span> 
+        <strong className="ms-2">Foro de Discusión Didáctico</strong>
+      </CCardHeader>
+      
+      <CCardBody className="bg-light">
+        {/* Contenedor de Mensajes */}
         <CListGroup
-          className="mb-3 forum-messages-container"
-          style={{ maxHeight: 350, overflowY: 'auto' }}
+          className="mb-3 p-2"
+          style={{ maxHeight: 400, overflowY: 'auto', borderRadius: '8px' }}
         >
-          {discussions.map(({ id, author, content, timestamp }) => {
-            const isMe = author === 'You' // Para diferenciar visualmente mis mensajes
+          {discussions.map(({ id, author, content, timestamp, likes }) => {
+            const isMe = author === 'You'
 
             return (
               <CListGroupItem
                 key={id}
-                className={`d-flex flex-column ${isMe ? 'align-items-end bg-light' : 'align-items-start bg-white'}`}
-                style={{ borderLeft: isMe ? '4px solid #321fdb' : '4px solid #f9b115' }}
+                className={`mb-3 border-0 shadow-sm rounded-3 d-flex flex-column ${
+                  isMe ? 'align-items-end ms-auto' : 'align-items-start me-auto'
+                }`}
+                style={{ 
+                  maxWidth: '85%', 
+                  backgroundColor: isMe ? '#e7f3ff' : '#ffffff',
+                  borderLeft: isMe ? 'none' : '4px solid #f9b115',
+                  borderRight: isMe ? '4px solid #321fdb' : 'none'
+                }}
               >
-                <div className="w-100 d-flex justify-content-between">
-                  {/* Autor y Timestamp */}
-                  <div className="d-flex align-items-center">
-                    <CBadge color={isMe ? 'primary' : 'warning'} className="me-2">
+                <div className="w-100 d-flex justify-content-between align-items-center mb-1">
+                  <div>
+                    <CBadge color={isMe ? 'primary' : 'warning'} shape="rounded-pill" className="me-2">
                       {author}
                     </CBadge>
-                    <small className="text-muted">{timestamp}</small>
+                    <small className="text-muted" style={{ fontSize: '0.75rem' }}>{timestamp}</small>
                   </div>
-
-                  {/* Botón de Eliminar */}
+                  
                   {isMe && (
-                    <CButton
-                      size="sm"
-                      color="danger"
-                      variant="ghost"
-                      onClick={() => handleDeleteMessage(id)}
-                    >
-                      <span role="img" aria-label="Eliminar">
-                        🗑️
-                      </span>
+                    <CButton size="sm" color="danger" variant="ghost" onClick={() => handleDeleteMessage(id)} className="p-0 text-danger">
+                      🗑️
                     </CButton>
                   )}
                 </div>
 
-                {/* Contenido del Mensaje */}
-                <div
-                  className={`mt-1 p-2 rounded ${isMe ? 'text-start' : 'text-start'}`}
-                  style={{
-                    whiteSpace: 'pre-wrap',
-                    maxWidth: '90%',
-                    overflowWrap: 'break-word',
-                    wordBreak: 'break-word',
-                  }}
-                >
+                {/* Contenido */}
+                <div style={{ whiteSpace: 'pre-wrap', overflowWrap: 'break-word', wordBreak: 'break-word', width: '100%' }}>
                   {content}
+                </div>
+
+                {/* Área de Reacción */}
+                <div className="mt-2 pt-1 border-top w-100 d-flex justify-content-end">
+                   <CButton 
+                    size="sm" 
+                    variant="ghost" 
+                    color="secondary" 
+                    onClick={() => handleLike(id)}
+                    className="py-0 px-2"
+                  >
+                    <span role="img" aria-label="like">👍</span> 
+                    <small className="ms-1">{likes > 0 ? likes : ''}</small>
+                  </CButton>
                 </div>
               </CListGroupItem>
             )
           })}
-          {/* Elemento vacío para hacer scroll */}
           <div ref={messagesEndRef} />
         </CListGroup>
 
-        {/* Formulario de Envío de Mensajes */}
-        <CForm onSubmit={handleSubmit}>
-          <CFormTextarea
-            ref={textareaRef}
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            // **NUEVO** Manejador de teclas
-            onKeyDown={handleKeyDown}
-            placeholder="Escribe tu mensaje... (Presiona Enter para enviar, Shift+Enter para salto de línea)"
-            rows={3}
-            required
-            className="mb-2"
-          />
+        {/* Formulario */}
+        <CForm onSubmit={handleSubmit} className="bg-white p-3 rounded shadow-sm">
+          <div className="position-relative">
+            <CFormTextarea
+              ref={textareaRef}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Escribe un aporte constructivo..."
+              rows={3}
+              required
+              className="mb-2 border-0 bg-light"
+              style={{ resize: 'none' }}
+            />
+            {/* Indicador de longitud */}
+            <div 
+              className={`position-absolute bottom-0 end-0 m-2 ${message.length > 255 ? 'text-danger' : 'text-muted'}`}
+              style={{ fontSize: '0.7rem' }}
+            >
+              {message.length}/255
+            </div>
+          </div>
 
-          {/* Botones de Emojis */}
-          <div className="mb-2">
+          <div className="d-flex flex-wrap gap-2 mb-3">
             {emojis.map((emoji) => (
               <CButton
                 key={emoji}
-                color="secondary"
+                color="light"
                 size="sm"
-                variant="outline"
-                className="me-2 mb-1"
+                className="border"
                 onClick={() => addEmoji(emoji)}
                 type="button"
               >
@@ -207,12 +208,9 @@ const ForumCrud = () => {
             ))}
           </div>
 
-          {/* Botón Enviar */}
-          <CButton type="submit" color="primary">
-            <span role="img" aria-label="Enviar">
-              ✉️
-            </span>{' '}
-            Enviar Mensaje
+          <CButton type="submit" color="primary" className="w-100 d-flex align-items-center justify-content-center py-2" disabled={!message.trim() || message.length > 255}>
+            <span role="img" aria-label="Enviar" className="me-2">🚀</span> 
+            Publicar en el Foro
           </CButton>
         </CForm>
       </CCardBody>

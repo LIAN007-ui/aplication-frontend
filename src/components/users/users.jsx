@@ -36,387 +36,331 @@ const UserCrud = () => {
     correo: '',
     telefono: '',
   })
+  
   const [selectedUser, setSelectedUser] = useState(null)
-  const [modalVisible, setModalVisible] = useState(false)
+  const [modalFormVisible, setModalFormVisible] = useState(false) // Modal para agregar/editar
+  const [modalViewVisible, setModalViewVisible] = useState(false) // Modal para ver detalles
+  const [errorBanner, setErrorBanner] = useState({ message: '', visible: false })
+  const [errorFields, setErrorFields] = useState([])
+  const errorStyle = {
+    boxShadow: '0 0 0 4px rgba(255,165,0,0.18)',
+    borderColor: '#ff8c00',
+    transition: 'box-shadow 300ms, border-color 300ms',
+  }
   const [searchTerm, setSearchTerm] = useState('')
 
-  // Carreras universitarias
-  const carreras = [
-    'Ingeniería de Sistemas',
-    'Ingeniería civil',
-    'Ingeniería electrónica',
-    'Administración',
-    'turismo',
-  ]
-
-  // Semestres
+  const carreras = ['Ingeniería de Sistemas', 'Ingeniería civil', 'Ingeniería electrica', 'Administración', 'turismo']
   const semestres = Array.from({ length: 8 }, (_, i) => (i + 1).toString())
 
-  // carga inicial de usuarios
   useEffect(() => {
     setUsers([
-      {
-        id: 1,
-        nombre: 'liander',
-        apellido: 'rincon',
-        cedula: '30163662',
-        carrera: 'Ingeniería de Sistemas',
-        semestre: '6',
-        correo: 'lianderclaret@gamil.com',
-        telefono: '04127459611',
-      },
-      {
-        id: 2,
-        nombre: 'Maria',
-        apellido: 'perez',
-        cedula: '30134562',
-        carrera: 'turismo',
-        semestre: '4',
-        correo: 'mariaperez@example.com',
-        telefono: '04248799757',
-      },
+      { id: 1, nombre: 'Liander', apellido: 'Rincon', cedula: '30163662', carrera: 'Ingeniería de Sistemas', semestre: '6', correo: 'lianderclaret@gmail.com', telefono: '04127459611' },
+      { id: 2, nombre: 'Maria', apellido: 'Perez', cedula: '30134562', carrera: 'turismo', semestre: '4', correo: 'mariaperez@gmail.com', telefono: '04248799757' },
     ])
   }, [])
 
   const handleChange = (e) => {
     const { name, value } = e.target
-    setForm((prev) => ({
-      ...prev,
-      [name]: value,
-    }))
+    if (errorBanner.visible) setErrorBanner({ message: '', visible: false })
+    if (errorFields.includes(name)) setErrorFields((prev) => prev.filter((f) => f !== name))
+    setForm((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleNumericChange = (e, name, maxLen) => {
+    const raw = e.target.value || ''
+    const digits = raw.replace(/\D/g, '').slice(0, maxLen)
+    if (errorBanner.visible) setErrorBanner({ message: '', visible: false })
+    if (errorFields.includes(name)) setErrorFields((prev) => prev.filter((f) => f !== name))
+    setForm((prev) => ({ ...prev, [name]: digits }))
+  }
+
+  const handlePasteNumeric = (e, name, maxLen) => {
+    const paste = (e.clipboardData || window.clipboardData).getData('text') || ''
+    if (!/^\d+$/.test(paste)) {
+      e.preventDefault()
+      return
+    }
+    const filtered = paste.replace(/\D/g, '').slice(0, maxLen)
+    e.preventDefault()
+    setForm((prev) => ({ ...prev, [name]: (prev[name] + filtered).slice(0, maxLen) }))
   }
 
   const validateForm = () => {
     const { nombre, apellido, cedula, correo, telefono } = form
-
-    if (
-      !nombre.trim() ||
-      !apellido.trim() ||
-      !cedula.trim() ||
-      !correo.trim() ||
-      !telefono.trim()
-    ) {
-      alert('Todos los campos son obligatorios')
+    const missing = []
+    if (!nombre) missing.push('nombre')
+    if (!apellido) missing.push('apellido')
+    if (!cedula) missing.push('cedula')
+    if (!correo) missing.push('correo')
+    if (!telefono) missing.push('telefono')
+    if (missing.length > 0) {
+      setErrorFields(missing)
+      setErrorBanner({ message: 'Complete los campos obligatorios.', visible: true })
+      setTimeout(() => {
+        setErrorBanner({ message: '', visible: false })
+        setErrorFields([])
+      }, 3000)
       return false
     }
-
-    if (!/^\d+$/.test(cedula)) {
-      alert('La cédula debe contener solo números')
+    if (!/^\d{8}$/.test(cedula)) {
+      setErrorFields(['cedula'])
+      setErrorBanner({ message: 'La cédula debe contener exactamente 8 dígitos.', visible: true })
+      setTimeout(() => {
+        setErrorBanner({ message: '', visible: false })
+        setErrorFields([])
+      }, 3000)
       return false
     }
-
-    if (!/^\d+$/.test(telefono)) {
-      alert('El teléfono debe contener solo números')
+    if (!/^\d{11}$/.test(telefono)) {
+      setErrorFields(['telefono'])
+      setErrorBanner({ message: 'El teléfono debe contener exactamente 11 dígitos.', visible: true })
+      setTimeout(() => {
+        setErrorBanner({ message: '', visible: false })
+        setErrorFields([])
+      }, 3000)
       return false
     }
-
-    if (!/\S+@\S+\.\S+/.test(correo)) {
-      alert('El correo electrónico no es válido')
+    // Verificar duplicados (ignorar el propio registro si está en edición)
+    const conflict = users.find((u) => u.id !== form.id && (u.cedula === cedula || u.correo === correo || u.telefono === telefono))
+    if (conflict) {
+      let field = ''
+      let fieldKey = ''
+      if (conflict.cedula === cedula) { field = 'Cédula'; fieldKey = 'cedula' }
+      else if (conflict.correo === correo) { field = 'Correo'; fieldKey = 'correo' }
+      else if (conflict.telefono === telefono) { field = 'Teléfono'; fieldKey = 'telefono' }
+      setErrorFields(fieldKey ? [fieldKey] : [])
+      setErrorBanner({ message: `${field} ya existe en otro registro.`, visible: true })
+      // ocultar automáticamente después de 3s
+      setTimeout(() => {
+        setErrorBanner({ message: '', visible: false })
+        setErrorFields([])
+      }, 3000)
       return false
     }
-
     return true
   }
 
   const handleSubmit = (e) => {
     e.preventDefault()
-
     if (!validateForm()) return
 
     if (form.id === null) {
-      // Crear usuario nuevo
       const newUser = {
         id: users.length > 0 ? Math.max(...users.map((u) => u.id)) + 1 : 1,
         ...form,
       }
       setUsers([...users, newUser])
     } else {
-      // Editar usuario existente
       setUsers(users.map((user) => (user.id === form.id ? { ...form } : user)))
     }
-    resetForm()
+    closeFormModal()
   }
 
   const handleEdit = (user) => {
     setForm(user)
+    setErrorBanner({ message: '', visible: false })
+    setErrorFields([])
+    setModalFormVisible(true)
   }
 
   const handleDelete = (id) => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar este usuario?')) {
+    if (window.confirm('¿Estás seguro de que deseas eliminar este estudiante?')) {
       setUsers(users.filter((user) => user.id !== id))
     }
   }
 
   const handleViewMore = (user) => {
     setSelectedUser(user)
-    setModalVisible(true)
+    setModalViewVisible(true)
   }
 
-  const resetForm = () => {
-    setForm({
-      id: null,
-      nombre: '',
-      apellido: '',
-      cedula: '',
-      carrera: '',
-      semestre: '',
-      correo: '',
-      telefono: '',
-    })
+  const closeFormModal = () => {
+    setModalFormVisible(false)
+    setForm({ id: null, nombre: '', apellido: '', cedula: '', carrera: '', semestre: '', correo: '', telefono: '' })
+    setErrorBanner({ message: '', visible: false })
+    setErrorFields([])
   }
 
-  // Filtrar usuarios basado en la búsqueda
   const filteredUsers = users.filter(
     (user) =>
       user.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.apellido.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.cedula.includes(searchTerm) ||
-      user.correo.toLowerCase().includes(searchTerm.toLowerCase()),
+      user.cedula.includes(searchTerm)
   )
 
   const getCarreraColor = (carrera) => {
-    const colors = {
-      'Ingeniería de Sistemas': 'primary',
-      Medicina: 'danger',
-      Derecho: 'warning',
-      Administración: 'success',
-      Psicología: 'info',
-      Contaduría: 'secondary',
-      'Ingeniería Civil': 'dark',
-      Arquitectura: 'light',
-    }
-    return colors[carrera] || 'primary'
+    const colors = { 'Ingeniería de Sistemas': 'primary', 'Administración': 'success', 'turismo': 'info' }
+    return colors[carrera] || 'secondary'
   }
 
   return (
-    <CCard>
-      <CCardHeader>
+    <CCard className="shadow-sm">
+      <CCardHeader className="bg-window py-3">
         <CRow className="align-items-center">
           <CCol>
-            <h4 className="mb-0">Lista de Estudiantes Universitarios</h4>
+            <h5 className="mb-0 text-primary">Estudiantes registrados</h5>
           </CCol>
-          <CCol xs="auto">
+          <CCol xs="auto" className="d-flex gap-2">
             <CFormInput
               type="text"
-              placeholder="Buscar estudiante..."
+              placeholder="Buscar..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ minWidth: '250px' }}
+              size="sm"
             />
+            <CTooltip content="Agregar nuevo estudiante">
+              <CButton color="primary" onClick={() => setModalFormVisible(true)}>
+                <span style={{ fontSize: '1.2rem' }}>✎</span> {/* Icono de lápiz */}
+              </CButton>
+            </CTooltip>
           </CCol>
         </CRow>
       </CCardHeader>
-      <CCardBody>
-        {/* Formulario */}
-        <CForm onSubmit={handleSubmit} className="mb-4">
-          <CRow className="g-3">
-            <CCol md={6}>
-              <CFormInput
-                type="text"
-                name="nombre"
-                placeholder="Nombre"
-                value={form.nombre}
-                onChange={handleChange}
-                required
-              />
-            </CCol>
-            <CCol md={6}>
-              <CFormInput
-                type="text"
-                name="apellido"
-                placeholder="Apellido"
-                value={form.apellido}
-                onChange={handleChange}
-                required
-              />
-            </CCol>
-            <CCol md={6}>
-              <CFormInput
-                type="text"
-                name="cedula"
-                placeholder="Cédula"
-                value={form.cedula}
-                onChange={handleChange}
-                required
-                maxLength="10"
-              />
-            </CCol>
-            <CCol md={6}>
-              <CFormInput
-                type="tel"
-                name="telefono"
-                placeholder="Número de Teléfono"
-                value={form.telefono}
-                onChange={handleChange}
-                required
-                maxLength="10"
-              />
-            </CCol>
-            <CCol md={6}>
-              <CFormSelect name="carrera" value={form.carrera} onChange={handleChange} required>
-                <option value="">Seleccione una carrera</option>
-                {carreras.map((carrera, index) => (
-                  <option key={index} value={carrera}>
-                    {carrera}
-                  </option>
-                ))}
-              </CFormSelect>
-            </CCol>
-            <CCol md={6}>
-              <CFormSelect name="semestre" value={form.semestre} onChange={handleChange} required>
-                <option value="">Seleccione el semestre</option>
-                {semestres.map((semestre) => (
-                  <option key={semestre} value={semestre}>
-                    Semestre {semestre}
-                  </option>
-                ))}
-              </CFormSelect>
-            </CCol>
-            <CCol md={12}>
-              <CFormInput
-                type="email"
-                name="correo"
-                placeholder="Correo Electrónico"
-                value={form.correo}
-                onChange={handleChange}
-                required
-              />
-            </CCol>
-            <CCol xs={12}>
-              <CButton type="submit" color="primary">
-                {form.id === null ? 'Agregar Estudiante' : 'Actualizar Estudiante'}
-              </CButton>
-              {form.id !== null && (
-                <CButton color="secondary" className="ms-2" onClick={resetForm}>
-                  Cancelar
-                </CButton>
-              )}
-            </CCol>
-          </CRow>
-        </CForm>
 
-        {/* Tabla */}
-        <CTable striped hover responsive>
-          <CTableHead>
+      <CCardBody>
+        <CTable align="middle" hover responsive borderless className="mb-0">
+          <CTableHead className="text-muted border-bottom">
             <CTableRow>
-              <CTableHeaderCell>#</CTableHeaderCell>
-              <CTableHeaderCell>Nombre Completo</CTableHeaderCell>
+              <CTableHeaderCell>Estudiante</CTableHeaderCell>
               <CTableHeaderCell>Cédula</CTableHeaderCell>
               <CTableHeaderCell>Carrera</CTableHeaderCell>
-              <CTableHeaderCell>Semestre</CTableHeaderCell>
-              <CTableHeaderCell>Contacto</CTableHeaderCell>
-              <CTableHeaderCell width="180px">Acciones</CTableHeaderCell>
+              <CTableHeaderCell className="text-center">Acciones</CTableHeaderCell>
             </CTableRow>
           </CTableHead>
           <CTableBody>
             {filteredUsers.map((user) => (
               <CTableRow key={user.id}>
-                <CTableDataCell>{user.id}</CTableDataCell>
                 <CTableDataCell>
-                  {user.nombre} {user.apellido}
+                  <div className="fw-bold">{user.nombre} {user.apellido}</div>
+                  <div className="small text-muted">{user.correo}</div>
                 </CTableDataCell>
                 <CTableDataCell>{user.cedula}</CTableDataCell>
                 <CTableDataCell>
-                  <CBadge color={getCarreraColor(user.carrera)}>{user.carrera}</CBadge>
+                  <CBadge color={getCarreraColor(user.carrera)} shape="pill">
+                    {user.carrera}
+                  </CBadge>
+                  <div className="small text-muted">Semestre {user.semestre}</div>
                 </CTableDataCell>
-                <CTableDataCell>Semestre {user.semestre}</CTableDataCell>
-                <CTableDataCell>
-                  <div>
-                    <small className="text-muted d-block">{user.correo}</small>
-                    <small className="text-muted">{user.telefono}</small>
-                  </div>
-                </CTableDataCell>
-                <CTableDataCell>
-                  <CTooltip content="Ver detalles">
-                    <CButton color="info" size="sm" onClick={() => handleViewMore(user)}>
-                      Ver más
-                    </CButton>
-                  </CTooltip>
-                  <CTooltip content="Editar estudiante">
-                    <CButton
-                      color="warning"
-                      size="sm"
-                      className="ms-1"
-                      onClick={() => handleEdit(user)}
-                    >
-                      Editar
-                    </CButton>
-                  </CTooltip>
-                  <CTooltip content="Eliminar estudiante">
-                    <CButton
-                      color="danger"
-                      size="sm"
-                      className="ms-1"
-                      onClick={() => handleDelete(user.id)}
-                    >
-                      Eliminar
-                    </CButton>
-                  </CTooltip>
+                <CTableDataCell className="text-center">
+                  <CButton color="window" size="sm" className="me-1" onClick={() => handleViewMore(user)}>👁️</CButton>
+                  <CButton color="window" size="sm" className="me-1 text-warning" onClick={() => handleEdit(user)}>✏️</CButton>
+                  <CButton color="window" size="sm" className="text-danger" onClick={() => handleDelete(user.id)}>🗑️</CButton>
                 </CTableDataCell>
               </CTableRow>
             ))}
-            {filteredUsers.length === 0 && (
-              <CTableRow>
-                <CTableDataCell colSpan={7} className="text-center">
-                  {searchTerm ? 'No se encontraron estudiantes' : 'No hay estudiantes registrados'}
-                </CTableDataCell>
-              </CTableRow>
-            )}
           </CTableBody>
         </CTable>
 
-        {/* Modal para ver más información */}
-        <CModal visible={modalVisible} onClose={() => setModalVisible(false)}>
+        {/* MODAL PARA FORMULARIO (AGREGAR/EDITAR) */}
+        <CModal backdrop="static" visible={modalFormVisible} onClose={closeFormModal} alignment="center" size="lg">
           <CModalHeader>
-            <CModalTitle>Información Completa del Estudiante</CModalTitle>
+            <CModalTitle>{form.id ? 'Editar Estudiante' : 'Nuevo Registro'}</CModalTitle>
+          </CModalHeader>
+          <CForm onSubmit={handleSubmit}>
+            <CModalBody>
+              {/* Banner de error animado */}
+              <div
+                style={{
+                  height: 36,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  marginBottom: 8,
+                  transition: 'transform 300ms ease, opacity 300ms ease',
+                  transform: errorBanner.visible ? 'translateY(0)' : 'translateY(-8px)',
+                  opacity: errorBanner.visible ? 1 : 0,
+                  color: '#842029',
+                  background: errorBanner.visible ? '#f8d7da' : 'transparent',
+                  borderRadius: 6,
+                  border: errorBanner.visible ? '1px solid #f5c2c7' : 'none',
+                  fontSize: 14,
+                }}
+              >
+                {errorBanner.visible ? errorBanner.message : ''}
+              </div>
+              <CRow className="g-3">
+                <CCol md={6}>
+                  <label className="small mb-1">Nombre</label>
+                  <CFormInput name="nombre" value={form.nombre} onChange={handleChange} required style={errorFields.includes('nombre') ? errorStyle : {}} />
+                </CCol>
+                <CCol md={6}>
+                  <label className="small mb-1">Apellido</label>
+                  <CFormInput name="apellido" value={form.apellido} onChange={handleChange} required style={errorFields.includes('apellido') ? errorStyle : {}} />
+                </CCol>
+                <CCol md={6}>
+                  <label className="small mb-1">Cédula</label>
+                  <CFormInput
+                    name="cedula"
+                    value={form.cedula}
+                    onChange={(e) => handleNumericChange(e, 'cedula', 8)}
+                    onPaste={(e) => handlePasteNumeric(e, 'cedula', 8)}
+                    inputMode="numeric"
+                    maxLength={8}
+                    required
+                    style={errorFields.includes('cedula') ? errorStyle : {}}
+                  />
+                </CCol>
+                <CCol md={6}>
+                  <label className="small mb-1">Teléfono</label>
+                  <CFormInput
+                    name="telefono"
+                    value={form.telefono}
+                    onChange={(e) => handleNumericChange(e, 'telefono', 11)}
+                    onPaste={(e) => handlePasteNumeric(e, 'telefono', 11)}
+                    inputMode="tel"
+                    maxLength={11}
+                    required
+                    style={errorFields.includes('telefono') ? errorStyle : {}}
+                  />
+                </CCol>
+                <CCol md={6}>
+                  <label className="small mb-1">Carrera</label>
+                  <CFormSelect name="carrera" value={form.carrera} onChange={handleChange} required style={errorFields.includes('carrera') ? errorStyle : {}}>
+                    <option value="">Seleccionar...</option>
+                    {carreras.map((c, i) => <option key={i} value={c}>{c}</option>)}
+                  </CFormSelect>
+                </CCol>
+                <CCol md={6}>
+                  <label className="small mb-1">Semestre</label>
+                  <CFormSelect name="semestre" value={form.semestre} onChange={handleChange} required style={errorFields.includes('semestre') ? errorStyle : {}}>
+                    <option value="">Seleccionar...</option>
+                    {semestres.map(s => <option key={s} value={s}>Semestre {s}</option>)}
+                  </CFormSelect>
+                </CCol>
+                <CCol md={12}>
+                  <label className="small mb-1">Correo Electrónico</label>
+                  <CFormInput type="email" name="correo" value={form.correo} onChange={handleChange} required style={errorFields.includes('correo') ? errorStyle : {}} />
+                </CCol>
+              </CRow>
+            </CModalBody>
+            <CModalFooter>
+              <CButton color="secondary" variant="ghost" onClick={closeFormModal}>Cancelar</CButton>
+              <CButton color="primary" type="submit">
+                {form.id ? 'Guardar Cambios' : 'Registrar Estudiante'}
+              </CButton>
+            </CModalFooter>
+          </CForm>
+        </CModal>
+
+        {/* MODAL PARA VER DETALLES */}
+        <CModal visible={modalViewVisible} onClose={() => setModalViewVisible(false)} alignment="center">
+          <CModalHeader>
+            <CModalTitle>Detalles del Estudiante</CModalTitle>
           </CModalHeader>
           <CModalBody>
             {selectedUser && (
-              <CRow className="g-3">
-                <CCol xs={6}>
-                  <strong>Nombre:</strong>
-                  <p>{selectedUser.nombre}</p>
-                </CCol>
-                <CCol xs={6}>
-                  <strong>Apellido:</strong>
-                  <p>{selectedUser.apellido}</p>
-                </CCol>
-                <CCol xs={6}>
-                  <strong>Cédula:</strong>
-                  <p>{selectedUser.cedula}</p>
-                </CCol>
-                <CCol xs={6}>
-                  <strong>Teléfono:</strong>
-                  <p>{selectedUser.telefono}</p>
-                </CCol>
-                <CCol xs={12}>
-                  <strong>Carrera:</strong>
-                  <p>
-                    <CBadge color={getCarreraColor(selectedUser.carrera)}>
-                      {selectedUser.carrera}
-                    </CBadge>
-                  </p>
-                </CCol>
-                <CCol xs={6}>
-                  <strong>Semestre:</strong>
-                  <p>Semestre {selectedUser.semestre}</p>
-                </CCol>
-                <CCol xs={6}>
-                  <strong>ID:</strong>
-                  <p>{selectedUser.id}</p>
-                </CCol>
-                <CCol xs={12}>
-                  <strong>Correo Electrónico:</strong>
-                  <p>{selectedUser.correo}</p>
-                </CCol>
-              </CRow>
+              <div className="p-2">
+                <div className="text-center mb-4">
+                  <div className="display-6">{selectedUser.nombre}</div>
+                  <CBadge color="primary">{selectedUser.carrera}</CBadge>
+                </div>
+                <hr />
+                <p><strong>Cédula:</strong> {selectedUser.cedula}</p>
+                <p><strong>Correo:</strong> {selectedUser.correo}</p>
+                <p><strong>Teléfono:</strong> {selectedUser.telefono}</p>
+                <p><strong>Semestre:</strong> {selectedUser.semestre}º Semestre</p>
+              </div>
             )}
           </CModalBody>
-          <CModalFooter>
-            <CButton color="secondary" onClick={() => setModalVisible(false)}>
-              Cerrar
-            </CButton>
-          </CModalFooter>
         </CModal>
       </CCardBody>
     </CCard>

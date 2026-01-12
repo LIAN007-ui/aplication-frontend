@@ -71,11 +71,11 @@ const _nav = [
         name: 'Primer semestre',
         to: '/base/accordion',
       },
-      {
+      /*{
         component: CNavItem,
         name: 'Segundo semestre',
         to: '/base/breadcrumbs',
-      },
+      }, 
       /*{   
         
       
