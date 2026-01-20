@@ -1,4 +1,8 @@
 import React, { useState, useEffect } from 'react'
+<<<<<<< HEAD
+=======
+import axios from 'axios'
+>>>>>>> 90e20dc (actualizacion visual)
 import {
   CButton,
   CCard,
@@ -25,6 +29,10 @@ import {
 } from '@coreui/react'
 
 const UserCrud = () => {
+<<<<<<< HEAD
+=======
+  const API_URL = 'http://localhost:3001/users'
+>>>>>>> 90e20dc (actualizacion visual)
   const [users, setUsers] = useState([])
   const [form, setForm] = useState({
     id: null,
@@ -38,8 +46,13 @@ const UserCrud = () => {
   })
   
   const [selectedUser, setSelectedUser] = useState(null)
+<<<<<<< HEAD
   const [modalFormVisible, setModalFormVisible] = useState(false) // Modal para agregar/editar
   const [modalViewVisible, setModalViewVisible] = useState(false) // Modal para ver detalles
+=======
+  const [modalFormVisible, setModalFormVisible] = useState(false)
+  const [modalViewVisible, setModalViewVisible] = useState(false)
+>>>>>>> 90e20dc (actualizacion visual)
   const [errorBanner, setErrorBanner] = useState({ message: '', visible: false })
   const [errorFields, setErrorFields] = useState([])
   const errorStyle = {
@@ -52,6 +65,7 @@ const UserCrud = () => {
   const carreras = ['Ingeniería de Sistemas', 'Ingeniería civil', 'Ingeniería electrica', 'Administración', 'turismo']
   const semestres = Array.from({ length: 8 }, (_, i) => (i + 1).toString())
 
+<<<<<<< HEAD
   useEffect(() => {
     setUsers([
       { id: 1, nombre: 'Liander', apellido: 'Rincon', cedula: '30163662', carrera: 'Ingeniería de Sistemas', semestre: '6', correo: 'lianderclaret@gmail.com', telefono: '04127459611' },
@@ -59,6 +73,23 @@ const UserCrud = () => {
     ])
   }, [])
 
+=======
+  // Cargar usuarios al montar el componente
+  useEffect(() => {
+    fetchUsers()
+  }, [])
+
+  const fetchUsers = async () => {
+    try {
+      const response = await axios.get(API_URL)
+      setUsers(response.data)
+    } catch (error) {
+      console.error('Error cargando usuarios:', error)
+      setErrorBanner({ message: 'Error de conexión con el servidor', visible: true })
+    }
+  }
+
+>>>>>>> 90e20dc (actualizacion visual)
   const handleChange = (e) => {
     const { name, value } = e.target
     if (errorBanner.visible) setErrorBanner({ message: '', visible: false })
@@ -120,7 +151,11 @@ const UserCrud = () => {
       }, 3000)
       return false
     }
+<<<<<<< HEAD
     // Verificar duplicados (ignorar el propio registro si está en edición)
+=======
+    // Verificar duplicados en la lista local (ya cargada)
+>>>>>>> 90e20dc (actualizacion visual)
     const conflict = users.find((u) => u.id !== form.id && (u.cedula === cedula || u.correo === correo || u.telefono === telefono))
     if (conflict) {
       let field = ''
@@ -130,7 +165,10 @@ const UserCrud = () => {
       else if (conflict.telefono === telefono) { field = 'Teléfono'; fieldKey = 'telefono' }
       setErrorFields(fieldKey ? [fieldKey] : [])
       setErrorBanner({ message: `${field} ya existe en otro registro.`, visible: true })
+<<<<<<< HEAD
       // ocultar automáticamente después de 3s
+=======
+>>>>>>> 90e20dc (actualizacion visual)
       setTimeout(() => {
         setErrorBanner({ message: '', visible: false })
         setErrorFields([])
@@ -140,6 +178,7 @@ const UserCrud = () => {
     return true
   }
 
+<<<<<<< HEAD
   const handleSubmit = (e) => {
     e.preventDefault()
     if (!validateForm()) return
@@ -154,6 +193,27 @@ const UserCrud = () => {
       setUsers(users.map((user) => (user.id === form.id ? { ...form } : user)))
     }
     closeFormModal()
+=======
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    if (!validateForm()) return
+
+    try {
+      if (form.id === null) {
+        // Crear nuevo usuario (POST)
+        const { id, ...newUser } = form // Quitamos el ID null para que json-server lo genere
+        await axios.post(API_URL, newUser)
+      } else {
+        // Editar usuario existente (PUT)
+        await axios.put(`${API_URL}/${form.id}`, form)
+      }
+      fetchUsers() // Recargar datos
+      closeFormModal()
+    } catch (error) {
+      console.error('Error guardando usuario:', error)
+      setErrorBanner({ message: 'Error guardando datos', visible: true })
+    }
+>>>>>>> 90e20dc (actualizacion visual)
   }
 
   const handleEdit = (user) => {
@@ -163,9 +223,21 @@ const UserCrud = () => {
     setModalFormVisible(true)
   }
 
+<<<<<<< HEAD
   const handleDelete = (id) => {
     if (window.confirm('¿Estás seguro de que deseas eliminar este estudiante?')) {
       setUsers(users.filter((user) => user.id !== id))
+=======
+  const handleDelete = async (id) => {
+    if (window.confirm('¿Estás seguro de que deseas eliminar este estudiante?')) {
+      try {
+        await axios.delete(`${API_URL}/${id}`)
+        fetchUsers() // Recargar datos
+      } catch (error) {
+        console.error('Error eliminando usuario:', error)
+        alert('Error eliminando usuario')
+      }
+>>>>>>> 90e20dc (actualizacion visual)
     }
   }
 
@@ -209,7 +281,11 @@ const UserCrud = () => {
             />
             <CTooltip content="Agregar nuevo estudiante">
               <CButton color="primary" onClick={() => setModalFormVisible(true)}>
+<<<<<<< HEAD
                 <span style={{ fontSize: '1.2rem' }}>✎</span> {/* Icono de lápiz */}
+=======
+                <span style={{ fontSize: '1.2rem' }}>✎</span>
+>>>>>>> 90e20dc (actualizacion visual)
               </CButton>
             </CTooltip>
           </CCol>
@@ -257,7 +333,10 @@ const UserCrud = () => {
           </CModalHeader>
           <CForm onSubmit={handleSubmit}>
             <CModalBody>
+<<<<<<< HEAD
               {/* Banner de error animado */}
+=======
+>>>>>>> 90e20dc (actualizacion visual)
               <div
                 style={{
                   height: 36,

@@ -10,6 +10,7 @@ import {
   CHeader,
   CHeaderNav,
   CHeaderToggler,
+<<<<<<< HEAD
   CNavLink,
   CNavItem,
   useColorModes,
@@ -27,6 +28,14 @@ import {
 
 import { AppBreadcrumb } from './index'
 import { AppHeaderDropdown } from './header/index'
+=======
+  useColorModes,
+} from '@coreui/react'
+import CIcon from '@coreui/icons-react'
+import { cilContrast, cilMenu, cilMoon, cilSun } from '@coreui/icons'
+
+// AppHeaderDropdown removed from header to keep only theme toggle
+>>>>>>> 90e20dc (actualizacion visual)
 
 const AppHeader = () => {
   const headerRef = useRef()
@@ -54,6 +63,7 @@ const AppHeader = () => {
         >
           <CIcon icon={cilMenu} size="lg" />
         </CHeaderToggler>
+<<<<<<< HEAD
         <CHeaderNav className="d-none d-md-flex">
           <CNavItem>
             <CNavLink to="/dashboard" as={NavLink}>
@@ -85,6 +95,9 @@ const AppHeader = () => {
           </CNavItem>
         </CHeaderNav>
         <CHeaderNav>
+=======
+        <CHeaderNav className="ms-auto">
+>>>>>>> 90e20dc (actualizacion visual)
           <li className="nav-item py-1">
             <div className="vr h-100 mx-2 text-body text-opacity-75"></div>
           </li>
@@ -128,6 +141,7 @@ const AppHeader = () => {
               </CDropdownItem>
             </CDropdownMenu>
           </CDropdown>
+<<<<<<< HEAD
           <li className="nav-item py-1">
             <div className="vr h-100 mx-2 text-body text-opacity-75"></div>
           </li>
@@ -137,6 +151,11 @@ const AppHeader = () => {
       <CContainer className="px-4" fluid>
         <AppBreadcrumb />
       </CContainer>
+=======
+        </CHeaderNav>
+      </CContainer>
+      {/* Breadcrumb removed to keep header minimal */}
+>>>>>>> 90e20dc (actualizacion visual)
     </CHeader>
   )
 }

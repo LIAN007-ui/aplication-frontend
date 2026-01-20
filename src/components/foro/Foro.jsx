@@ -1,4 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react'
+<<<<<<< HEAD
+=======
+import axios from 'axios'
+>>>>>>> 90e20dc (actualizacion visual)
 import {
   CCard,
   CCardBody,
@@ -13,11 +17,16 @@ import {
 
 // palabras censuradas
 const BANNED_WORDS = ['tonto', 'idiota', 'estúpido', 'perro', 'puto', 'gay', 'liander']
+<<<<<<< HEAD
 
 // Lista de emojis
 const emojis = ['😀', '😂', '😍', '🥳', '👍', '💡', '🔥']
 
 // --- FUNCIONES DE UTILIDAD ---
+=======
+const emojis = ['😀', '😂', '😍', '🥳', '👍', '💡', '🔥']
+
+>>>>>>> 90e20dc (actualizacion visual)
 const censorMessage = (content) => {
   let censored = content
   BANNED_WORDS.forEach((word) => {
@@ -29,6 +38,7 @@ const censorMessage = (content) => {
 }
 
 const ForumCrud = () => {
+<<<<<<< HEAD
   const messagesEndRef = useRef(null)
   const textareaRef = useRef(null)
 
@@ -43,15 +53,50 @@ const ForumCrud = () => {
   ])
   const [message, setMessage] = useState('')
 
+=======
+  const API_URL = 'http://localhost:3001/messages'
+  const messagesEndRef = useRef(null)
+  const textareaRef = useRef(null)
+
+  const [discussions, setDiscussions] = useState([])
+  const [message, setMessage] = useState('')
+
+  // Cargar mensajes al iniciar
+  useEffect(() => {
+    fetchMessages()
+  }, [])
+
+>>>>>>> 90e20dc (actualizacion visual)
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [discussions])
 
+<<<<<<< HEAD
   // --- NUEVA LÓGICA: MANEJO DE REACCIONES ---
   const handleLike = (id) => {
     setDiscussions(discussions.map(msg => 
       msg.id === id ? { ...msg, likes: (msg.likes || 0) + 1 } : msg
     ))
+=======
+  const fetchMessages = async () => {
+    try {
+      const res = await axios.get(API_URL)
+      setDiscussions(res.data)
+    } catch (e) { console.error('Error cargando mensajes:', e) }
+  }
+
+  const handleLike = async (id) => {
+    const msg = discussions.find((m) => m.id === id)
+    if (!msg) return
+
+    const updatedMsg = { ...msg, likes: (msg.likes || 0) + 1 }
+    // Optimistic Update
+    setDiscussions(discussions.map((d) => (d.id === id ? updatedMsg : d)))
+
+    try {
+      await axios.put(`${API_URL}/${id}`, updatedMsg)
+    } catch (e) { console.error(e) }
+>>>>>>> 90e20dc (actualizacion visual)
   }
 
   const addEmoji = (emoji) => {
@@ -66,6 +111,7 @@ const ForumCrud = () => {
     }, 0)
   }
 
+<<<<<<< HEAD
   const handleDeleteMessage = (id) => {
     if (window.confirm('¿Estás seguro de que quieres eliminar este mensaje?')) {
       setDiscussions(discussions.filter((msg) => msg.id !== id))
@@ -73,21 +119,59 @@ const ForumCrud = () => {
   }
 
   const postMessage = () => {
+=======
+  const handleDeleteMessage = async (id) => {
+    if (window.confirm('¿Estás seguro de que quieres eliminar este mensaje?')) {
+      try {
+        await axios.delete(`${API_URL}/${id}`)
+        setDiscussions(discussions.filter((msg) => msg.id !== id))
+      } catch (e) { console.error(e) }
+    }
+  }
+
+  const postMessage = async () => {
+>>>>>>> 90e20dc (actualizacion visual)
     const rawMessage = message.trim()
     if (!rawMessage || rawMessage.length > 255) return
 
     const safeContent = censorMessage(rawMessage)
+<<<<<<< HEAD
 
     const newMsg = {
       id: Date.now(), // ID más confiable
       author: 'You',
+=======
+    
+    // Obtener nombre del usuario actual del localStorage (para el autor)
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'))
+    let authorName = 'Anónimo'
+    
+    if (currentUser) {
+      authorName = currentUser.username
+    }
+    // Si es el admin logueado
+    if (localStorage.getItem('userRole') === 'admin') {
+      authorName = 'Admin'
+    }
+
+    const newMsg = {
+      author: authorName,
+>>>>>>> 90e20dc (actualizacion visual)
       content: safeContent,
       timestamp: new Date().toLocaleTimeString(),
       likes: 0,
     }
 
+<<<<<<< HEAD
     setDiscussions([...discussions, newMsg])
     setMessage('')
+=======
+    try {
+      const res = await axios.post(API_URL, newMsg)
+      setDiscussions([...discussions, res.data])
+      setMessage('')
+    } catch (e) { console.error(e) }
+>>>>>>> 90e20dc (actualizacion visual)
   }
 
   const handleSubmit = (e) => {
@@ -116,7 +200,16 @@ const ForumCrud = () => {
           style={{ maxHeight: 400, overflowY: 'auto', borderRadius: '8px' }}
         >
           {discussions.map(({ id, author, content, timestamp, likes }) => {
+<<<<<<< HEAD
             const isMe = author === 'You'
+=======
+            const currentUser = JSON.parse(localStorage.getItem('currentUser'))
+            const myUsername = currentUser ? currentUser.username : ''
+            const myRole = localStorage.getItem('userRole')
+
+            // Lógica para determinar si el mensaje es "mío"
+            const isMe = (author === 'Admin' && myRole === 'admin') || (author === myUsername)
+>>>>>>> 90e20dc (actualizacion visual)
 
             return (
               <CListGroupItem

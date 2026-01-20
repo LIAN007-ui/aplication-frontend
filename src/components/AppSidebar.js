@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 import React, { useState } from 'react'
+=======
+import React from 'react'
+>>>>>>> 90e20dc (actualizacion visual)
 import { useSelector, useDispatch } from 'react-redux'
 
 import {
@@ -10,6 +14,7 @@ import {
   CSidebarToggler,
   CImage,
 } from '@coreui/react'
+<<<<<<< HEAD
 import CIcon from '@coreui/icons-react'
 
 import { AppSidebarNav } from './AppSidebarNav'
@@ -42,11 +47,35 @@ const ImageLogo = () => {
   )
 }
 
+=======
+
+import { AppSidebarNav } from './AppSidebarNav'
+
+// Importamos la configuración del menú
+import navigation from '../_nav'
+
+>>>>>>> 90e20dc (actualizacion visual)
 const AppSidebar = () => {
   const dispatch = useDispatch()
   const unfoldable = useSelector((state) => state.sidebarUnfoldable)
   const sidebarShow = useSelector((state) => state.sidebarShow)
 
+<<<<<<< HEAD
+=======
+  // --- LÓGICA DE SEGURIDAD (Agregada) ---
+  const userRole = localStorage.getItem('userRole') // 'admin' o 'student'
+
+  const filteredNav = navigation.filter((item) => {
+    // Si el item requiere permiso 'admin' y el usuario NO es admin -> OCULTAR
+    if (item.permission === 'admin' && userRole !== 'admin') {
+      return false
+    }
+    // Si no -> MOSTRAR
+    return true
+  })
+  // ---------------------------------------
+
+>>>>>>> 90e20dc (actualizacion visual)
   return (
     <CSidebar
       className="border-end"
@@ -60,6 +89,10 @@ const AppSidebar = () => {
     >
       <CSidebarHeader className="border-bottom">
         <CSidebarBrand to="/">
+<<<<<<< HEAD
+=======
+          {/* TU LOGO ORIGINAL RECUPERADO */}
+>>>>>>> 90e20dc (actualizacion visual)
           <CImage align="center" src="src/assets/images/logo.png" height={150} />
         </CSidebarBrand>
         <CCloseButton
@@ -68,7 +101,14 @@ const AppSidebar = () => {
           onClick={() => dispatch({ type: 'set', sidebarShow: false })}
         />
       </CSidebarHeader>
+<<<<<<< HEAD
       <AppSidebarNav items={navigation} />
+=======
+
+      {/* Usamos la lista filtrada 'filteredNav' en lugar de 'navigation' */}
+      <AppSidebarNav items={filteredNav} />
+
+>>>>>>> 90e20dc (actualizacion visual)
       <CSidebarFooter className="border-top d-none d-lg-flex">
         <CSidebarToggler
           onClick={() => dispatch({ type: 'set', sidebarUnfoldable: !unfoldable })}
@@ -78,4 +118,8 @@ const AppSidebar = () => {
   )
 }
 
+<<<<<<< HEAD
 export default React.memo(AppSidebar)
+=======
+export default React.memo(AppSidebar)
+>>>>>>> 90e20dc (actualizacion visual)

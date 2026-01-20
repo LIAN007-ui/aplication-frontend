@@ -1,5 +1,10 @@
 import React, { useState } from 'react'
+<<<<<<< HEAD
 import { useNavigate, Link } from 'react-router-dom'
+=======
+import { useNavigate } from 'react-router-dom'
+import axios from 'axios'
+>>>>>>> 90e20dc (actualizacion visual)
 import {
   CButton,
   CCard,
@@ -15,6 +20,10 @@ import LoadingOverlay from '../../../components/LoadingOverlay/LoadingOverlay'
 
 const Register = () => {
   const navigate = useNavigate()
+<<<<<<< HEAD
+=======
+  const API_URL = 'http://localhost:3001/users'
+>>>>>>> 90e20dc (actualizacion visual)
 
   const [nombre, setNombre] = useState('')
   const [apellido, setApellido] = useState('')
@@ -32,6 +41,7 @@ const Register = () => {
   const [showRepeatPass, setShowRepeatPass] = useState(false)
   const [isNavigating, setIsNavigating] = useState(false)
 
+<<<<<<< HEAD
   // --- FUNCIONES DE VALIDACIÓN CORREGIDAS ---
 
   const handleNombreChange = (e) => {
@@ -39,13 +49,22 @@ const Register = () => {
     if (/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]*$/.test(value)) {
       setNombre(value) // Actualiza solo nombre
     }
+=======
+  const handleNombreChange = (e) => {
+    const value = e.target.value
+    if (/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]*$/.test(value)) setNombre(value)
+>>>>>>> 90e20dc (actualizacion visual)
   }
 
   const handleApellidoChange = (e) => {
     const value = e.target.value
+<<<<<<< HEAD
     if (/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]*$/.test(value)) {
       setApellido(value) // Actualiza solo apellido
     }
+=======
+    if (/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]*$/.test(value)) setApellido(value)
+>>>>>>> 90e20dc (actualizacion visual)
   }
 
   const handleCedulaChange = (e) => {
@@ -57,7 +76,11 @@ const Register = () => {
     }
   }
 
+<<<<<<< HEAD
   const handleRegister = (e) => {
+=======
+  const handleRegister = async (e) => {
+>>>>>>> 90e20dc (actualizacion visual)
     e.preventDefault()
     setError('')
 
@@ -91,6 +114,7 @@ const Register = () => {
       return
     }
 
+<<<<<<< HEAD
     const usersJson = localStorage.getItem('users')
     const users = usersJson ? JSON.parse(usersJson) : []
     if (users.find((u) => u.username === username)) {
@@ -101,6 +125,44 @@ const Register = () => {
     users.push({ nombre, apellido, cedula, username, email, semestre, carrera, password })
     localStorage.setItem('users', JSON.stringify(users))
     navigate('/login')
+=======
+    try {
+      // Verificar duplicados en el servidor
+      const { data: userCheck } = await axios.get(`${API_URL}?username=${username}`)
+      const { data: cedulaCheck } = await axios.get(`${API_URL}?cedula=${cedula}`)
+
+      if (userCheck.length > 0) {
+        triggerError('El usuario ya existe')
+        return
+      }
+      if (cedulaCheck.length > 0) {
+        triggerError('Esta cédula ya está registrada')
+        return
+      }
+
+      // Crear usuario
+      const newUser = {
+        nombre,
+        apellido,
+        cedula,
+        username,
+        email,
+        semestre,
+        carrera,
+        password,
+        role: 'student' // Rol por defecto
+      }
+      
+      await axios.post(API_URL, newUser)
+
+      setIsNavigating(true)
+      setTimeout(() => navigate('/login'), 1000)
+      
+    } catch (err) {
+      console.error(err)
+      triggerError('Error conectando con el servidor')
+    }
+>>>>>>> 90e20dc (actualizacion visual)
   }
 
   const triggerError = (msg) => {
@@ -346,4 +408,8 @@ const Register = () => {
   )
 }
 
+<<<<<<< HEAD
 export default Register
+=======
+export default Register
+>>>>>>> 90e20dc (actualizacion visual)

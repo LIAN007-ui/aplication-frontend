@@ -1,4 +1,8 @@
 import React, { useState, useEffect } from 'react'
+<<<<<<< HEAD
+=======
+import axios from 'axios'
+>>>>>>> 90e20dc (actualizacion visual)
 import {
   CButton,
   CCard,
@@ -25,6 +29,10 @@ import {
 } from '@coreui/react'
 
 const AdminPostCrud = () => {
+<<<<<<< HEAD
+=======
+  const API_URL = 'http://localhost:3001/posts'
+>>>>>>> 90e20dc (actualizacion visual)
   const [posts, setPosts] = useState([])
   const [form, setForm] = useState({ id: null, title: '', body: '', mediaUrl: '', mediaType: '', date: '' })
   const [fileInputKey, setFileInputKey] = useState(Date.now())
@@ -45,6 +53,21 @@ const AdminPostCrud = () => {
     animation: 'shake 0.5s cubic-bezier(.36,.07,.19,.97) both',
   }
 
+<<<<<<< HEAD
+=======
+  // Cargar posts al iniciar
+  useEffect(() => {
+    fetchPosts()
+  }, [])
+
+  const fetchPosts = async () => {
+    try {
+      const res = await axios.get(API_URL)
+      setPosts(res.data)
+    } catch (e) { console.error('Error cargando posts:', e) }
+  }
+
+>>>>>>> 90e20dc (actualizacion visual)
   const handleChange = (e) => {
     const { name, value } = e.target
     if (errorBanner.visible) setErrorBanner({ message: '', visible: false })
@@ -57,17 +80,30 @@ const AdminPostCrud = () => {
     if (errorFields.includes('media')) setErrorFields((prev) => prev.filter((f) => f !== 'media'))
     
     if (file) {
+<<<<<<< HEAD
       setForm({ 
         ...form, 
         mediaUrl: URL.createObjectURL(file),
         mediaType: file.type // Guardamos el tipo de archivo (image/png, application/pdf, etc.)
+=======
+      // NOTA: json-server no maneja archivos binarios reales.
+      // Usamos createObjectURL para simular la carga y ver la preview en la sesión actual.
+      // En un backend real, aquí subirías el archivo y obtendrías una URL del servidor.
+      setForm({ 
+        ...form, 
+        mediaUrl: URL.createObjectURL(file),
+        mediaType: file.type 
+>>>>>>> 90e20dc (actualizacion visual)
       })
     } else {
       setForm({ ...form, mediaUrl: '', mediaType: '' })
     }
   }
 
+<<<<<<< HEAD
   // Función para renderizar la vista previa según el tipo de archivo
+=======
+>>>>>>> 90e20dc (actualizacion visual)
   const renderMediaPreview = () => {
     const { mediaUrl, mediaType } = form
     if (!mediaUrl) return null
@@ -90,11 +126,18 @@ const AdminPostCrud = () => {
       )
     }
 
+<<<<<<< HEAD
     // Para Word, Excel y otros (Icono de documento genérico)
     return (
       <div className="p-3 bg-light border rounded text-center">
         <div style={{ fontSize: '30px' }}>📁</div>
         <small className="text-dark fw-bold">Documento: {mediaType.split('/')[1].toUpperCase()}</small>
+=======
+    return (
+      <div className="p-3 bg-light border rounded text-center">
+        <div style={{ fontSize: '30px' }}>📁</div>
+        <small className="text-dark fw-bold">Documento: {mediaType.split('/')[1]?.toUpperCase() || 'FILE'}</small>
+>>>>>>> 90e20dc (actualizacion visual)
         <div className="mt-1 small text-muted">Vista previa no disponible para este formato, pero el archivo está cargado.</div>
       </div>
     )
@@ -107,7 +150,11 @@ const AdminPostCrud = () => {
     setErrorFields([])
   }
 
+<<<<<<< HEAD
   const handleSubmit = (e) => {
+=======
+  const handleSubmit = async (e) => {
+>>>>>>> 90e20dc (actualizacion visual)
     e.preventDefault()
     const missing = []
     if (!form.title.trim()) missing.push('title')
@@ -121,6 +168,7 @@ const AdminPostCrud = () => {
       return
     }
 
+<<<<<<< HEAD
     if (form.id === null) {
       const newPost = { ...form, id: posts.length > 0 ? posts[posts.length - 1].id + 1 : 1, date: new Date().toLocaleString() }
       setPosts([...posts, newPost])
@@ -128,11 +176,39 @@ const AdminPostCrud = () => {
       setPosts(posts.map((post) => (post.id === form.id ? { ...form } : post)))
     }
     closeModal()
+=======
+    try {
+      if (form.id === null) {
+        // CREAR
+        const { id, ...newPost } = form
+        newPost.date = new Date().toLocaleString()
+        await axios.post(API_URL, newPost)
+      } else {
+        // EDITAR
+        await axios.put(`${API_URL}/${form.id}`, form)
+      }
+      fetchPosts()
+      closeModal()
+    } catch (err) { console.error(err) }
+>>>>>>> 90e20dc (actualizacion visual)
   }
 
   const handleEdit = (post) => { setForm(post); setFileInputKey(Date.now()); setModalVisible(true) }
   const requestDelete = (id) => { setPostToDelete(id); setDeleteModalVisible(true) }
+<<<<<<< HEAD
   const confirmDelete = () => { setPosts(posts.filter((post) => post.id !== postToDelete)); setDeleteModalVisible(false); setPostToDelete(null) }
+=======
+  
+  const confirmDelete = async () => { 
+    try {
+      await axios.delete(`${API_URL}/${postToDelete}`)
+      fetchPosts()
+      setDeleteModalVisible(false)
+      setPostToDelete(null)
+    } catch (err) { console.error(err) }
+  }
+  
+>>>>>>> 90e20dc (actualizacion visual)
   const openModalForCreate = () => { resetForm(); setModalVisible(true) }
   const closeModal = () => { setModalVisible(false); resetForm() }
 
@@ -140,7 +216,11 @@ const AdminPostCrud = () => {
     <CRow>
       <style>{`@keyframes shake { 10%, 90% { transform: translate3d(-1px, 0, 0); } 20%, 80% { transform: translate3d(2px, 0, 0); } 30%, 50%, 70% { transform: translate3d(-4px, 0, 0); } 40%, 60% { transform: translate3d(4px, 0, 0); } }`}</style>
 
+<<<<<<< HEAD
       {/* CABECERA Y TABLA (Sin cambios) */}
+=======
+      {/* CABECERA Y TABLA */}
+>>>>>>> 90e20dc (actualizacion visual)
       <CCol xs={12} className="mb-4">
         <CCard className="shadow-sm border-top-primary border-top-3">
           <CCardHeader className="d-flex align-items-center justify-content-between">
@@ -211,7 +291,11 @@ const AdminPostCrud = () => {
                   type="file"
                   onChange={handleFileChange}
                   key={fileInputKey}
+<<<<<<< HEAD
                   accept=".jpg,.jpeg,.png,.mp4,.pdf,.doc,.docx,.xls,.xlsx" // Acepta múltiples tipos
+=======
+                  accept=".jpg,.jpeg,.png,.mp4,.pdf,.doc,.docx,.xls,.xlsx"
+>>>>>>> 90e20dc (actualizacion visual)
                   className="mb-3"
                   style={{ ...(errorFields.includes('media') ? { ...errorStyle, ...shakeAnimation } : {}) }}
                 />

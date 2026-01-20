@@ -27,20 +27,36 @@
     "@coreui/react-chartjs": "^3.0.0",
     "@coreui/utils": "^2.0.2",
     "@popperjs/core": "^2.11.8",
+<<<<<<< HEAD
     "chart.js": "^4.5.1",
     "classnames": "^2.5.1",
     "core-js": "^3.46.0",
+=======
+    "axios": "^1.13.2",
+    "chart.js": "^4.5.1",
+    "classnames": "^2.5.1",
+    "core-js": "^3.46.0",
+    "json-server": "^1.0.0-beta.3",
+>>>>>>> 90e20dc (actualizacion visual)
     "prop-types": "^15.8.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-redux": "^9.2.0",
     "react-router-dom": "^7.9.5",
     "redux": "5.0.1",
+<<<<<<< HEAD
+=======
+    "simplebar": "^6.3.3",
+>>>>>>> 90e20dc (actualizacion visual)
     "simplebar-react": "^3.3.2"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^5.1.0",
     "autoprefixer": "^10.4.21",
+<<<<<<< HEAD
+=======
+    "concurrently": "^9.2.1",
+>>>>>>> 90e20dc (actualizacion visual)
     "eslint": "^9.38.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",

@@ -1,5 +1,9 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+<<<<<<< HEAD
+=======
+import axios from 'axios'
+>>>>>>> 90e20dc (actualizacion visual)
 import {
   CButton,
   CCard,
@@ -12,19 +16,36 @@ import {
 } from '@coreui/react'
 import PasswordRecovery from '../../../components/PasswordRecovery/PasswordRecovery'
 import LoadingOverlay from '../../../components/LoadingOverlay/LoadingOverlay'
+<<<<<<< HEAD
 
 const Login = () => {
   const navigate = useNavigate()
+=======
+import AdminLoginModal from '../../../components/AdminLoginModal/AdminLoginModal'
+
+const Login = () => {
+  const navigate = useNavigate()
+  const API_URL = 'http://localhost:3001/users'
+
+>>>>>>> 90e20dc (actualizacion visual)
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [isShaking, setIsShaking] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+<<<<<<< HEAD
   // Estado para mostrar modal de recuperación (se usa el componente externo)
   const [showRecoveryModal, setShowRecoveryModal] = useState(false)
   const [isNavigating, setIsNavigating] = useState(false)
 
   const handleLogin = (e) => {
+=======
+  const [showRecoveryModal, setShowRecoveryModal] = useState(false)
+  const [isNavigating, setIsNavigating] = useState(false)
+  const [showAdminModal, setShowAdminModal] = useState(false)
+
+  const handleLogin = async (e) => {
+>>>>>>> 90e20dc (actualizacion visual)
     e.preventDefault()
     setError('')
 
@@ -33,6 +54,7 @@ const Login = () => {
       return
     }
 
+<<<<<<< HEAD
     const usersJson = localStorage.getItem('users')
     const users = usersJson ? JSON.parse(usersJson) : []
     const user = users.find((u) => u.username === username && u.password === password)
@@ -49,6 +71,45 @@ const Login = () => {
     }
   }
 
+=======
+    try {
+      
+      const response = await axios.get(`${API_URL}?username=${username}&password=${password}`)
+      const usersFound = response.data
+
+      if (usersFound.length > 0) {
+      
+        const user = usersFound[0]
+        
+        localStorage.setItem('isAuthenticated', 'true')
+        localStorage.setItem('userRole', 'student') 
+        localStorage.setItem(
+          'currentUser',
+          JSON.stringify({ username: user.username, email: user.email }),
+        )
+        
+        setIsNavigating(true)
+        setTimeout(() => navigate('/base/accordion'), 1000) 
+      } else {
+        triggerError('Usuario o contraseña incorrectos')
+      }
+    } catch (err) {
+      console.error(err)
+      triggerError('Error de conexión con el servidor')
+    }
+  }
+
+  const handleAdminSuccess = () => {
+    
+    localStorage.setItem('isAuthenticated', 'true')
+    localStorage.setItem('userRole', 'admin')
+    
+    setShowAdminModal(false)
+    setIsNavigating(true)
+    setTimeout(() => navigate('/dashboard'), 1000)
+  }
+
+>>>>>>> 90e20dc (actualizacion visual)
   const triggerError = (msg) => {
     setError(msg)
     setIsShaking(true)
@@ -104,7 +165,10 @@ const Login = () => {
             z-index: 2;
           }
 
+<<<<<<< HEAD
           /* ANIMACIÓN DE SACUDIDA RECUPERADA */
+=======
+>>>>>>> 90e20dc (actualizacion visual)
           .shake-animation {
             animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
           }
@@ -118,7 +182,10 @@ const Login = () => {
             transition: all 0.3s ease;
           }
 
+<<<<<<< HEAD
           /* ANIMACIÓN DE PULSO RECUPERADA */
+=======
+>>>>>>> 90e20dc (actualizacion visual)
           .input-empty {
             animation: pulseWarning 1.5s infinite !important;
           }
@@ -131,11 +198,18 @@ const Login = () => {
             display: block;
           }
 
+<<<<<<< HEAD
           /* BOTÓN VER/OCULTAR POSICIONADO CORRECTAMENTE */
           .pass-toggle {
             position: absolute;
             right: 12px;
             bottom: 10px; /* Ajustado para que no choque con la etiqueta */
+=======
+          .pass-toggle {
+            position: absolute;
+            right: 12px;
+            bottom: 10px;
+>>>>>>> 90e20dc (actualizacion visual)
             cursor: pointer;
             color: #003366;
             font-size: 0.7rem;
@@ -150,6 +224,17 @@ const Login = () => {
             background: #ffffff;
             color: #2b87f4;
           }
+<<<<<<< HEAD
+=======
+
+          .admin-modal .modal-content {
+            background: rgba(255, 255, 255, 0.2) !important;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.3) !important;
+            color: white;
+            border-radius: 25px !important;
+          }
+>>>>>>> 90e20dc (actualizacion visual)
         `}
       </style>
 
@@ -159,6 +244,7 @@ const Login = () => {
         <CContainer style={{ zIndex: 3 }}>
           <CRow className="align-items-center">
             <CCol md={7} className="text-white d-none d-md-block px-5">
+<<<<<<< HEAD
               <h1
                 className="display-2 fw-bold"
                 style={{ textShadow: '2px 2px 10px rgba(0,0,0,0.5)' }}
@@ -184,6 +270,20 @@ const Login = () => {
 
                     <div className="mb-3">
                       <label className="label-resaltado">Usuario / Email</label>
+=======
+              <h1 className="display-2 fw-bold" style={{ textShadow: '2px 2px 10px rgba(0,0,0,0.5)' }}>UNEFA</h1>
+              <p className="fs-5 opacity-90" style={{ textShadow: '1px 1px 4px black' }}>"Explora, participa y descubre lo nuevo en UNEFA."</p>
+            </CCol>
+
+            <CCol md={5} lg={4}>
+              <CCard className={`glass-panel p-3 shadow-lg ${isShaking ? 'shake-animation' : ''}`}>
+                <CCardBody>
+                  <CForm onSubmit={handleLogin}>
+                    <h2 className="text-white fw-bold mb-4 text-center" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>Entrar</h2>
+
+                    <div className="mb-3">
+                      <label className="label-resaltado">Usuario</label>
+>>>>>>> 90e20dc (actualizacion visual)
                       <CFormInput
                         className={`custom-input py-2 ${error && !username ? 'input-empty' : ''}`}
                         placeholder="Ingresa tu usuario"
@@ -192,7 +292,10 @@ const Login = () => {
                       />
                     </div>
 
+<<<<<<< HEAD
                     {/* CONTENEDOR DE CONTRASEÑA */}
+=======
+>>>>>>> 90e20dc (actualizacion visual)
                     <div className="mb-2 position-relative d-flex flex-column">
                       <label className="label-resaltado">Contraseña</label>
                       <div className="position-relative">
@@ -203,6 +306,7 @@ const Login = () => {
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                         />
+<<<<<<< HEAD
 
                         {/* BOTÓN VER CONDICIONAL */}
                         {password.length > 0 && (
@@ -210,12 +314,17 @@ const Login = () => {
                             className="pass-toggle"
                             onClick={() => setShowPassword(!showPassword)}
                           >
+=======
+                        {password.length > 0 && (
+                          <span className="pass-toggle" onClick={() => setShowPassword(!showPassword)}>
+>>>>>>> 90e20dc (actualizacion visual)
                             {showPassword ? 'OCULTAR' : 'VER'}
                           </span>
                         )}
                       </div>
                     </div>
 
+<<<<<<< HEAD
                     <div className="text-end mb-4">
                       <Link
                         to="#"
@@ -228,6 +337,26 @@ const Login = () => {
                       >
                         ¿Olvidaste tu contraseña?
                       </Link>
+=======
+                    <div className="d-flex flex-column align-items-center mb-4">
+                      <Link
+                        to="#"
+                        onClick={(e) => { e.preventDefault(); setShowRecoveryModal(true); }}
+                        className="text-white small text-decoration-underline fw-bold"
+                        style={{ textShadow: '1px 1px 2px black', textDecorationColor: 'white' }}
+                      >
+                        ¿Olvidaste tu contraseña?
+                      </Link>
+
+                      <Link
+                        to="#"
+                        onClick={(e) => { e.preventDefault(); setShowAdminModal(true); }}
+                        className="text-white small text-decoration-underline fw-bold"
+                        style={{ textShadow: '1px 1px 2px black', textDecorationColor: 'white' }}
+                      >
+                        Acceso Administrador
+                      </Link>
+>>>>>>> 90e20dc (actualizacion visual)
                     </div>
 
                     <CButton
@@ -238,10 +367,14 @@ const Login = () => {
                       ENTRAR
                     </CButton>
 
+<<<<<<< HEAD
                     <div
                       className="text-center text-white small fw-bold"
                       style={{ textShadow: '1px 1px 3px black' }}
                     >
+=======
+                    <div className="text-center text-white small fw-bold" style={{ textShadow: '1px 1px 3px black' }}>
+>>>>>>> 90e20dc (actualizacion visual)
                       ¿No tienes cuenta?{' '}
                       <a
                         href="#"
@@ -268,15 +401,30 @@ const Login = () => {
           </CRow>
         </CContainer>
 
+<<<<<<< HEAD
         {/* Componente separado de recuperación */}
         <PasswordRecovery visible={showRecoveryModal} onClose={() => setShowRecoveryModal(false)} />
 
         {/* Overlay de carga al navegar */}
         <LoadingOverlay visible={isNavigating} />
 
+=======
+        <AdminLoginModal
+          visible={showAdminModal}
+          onClose={() => setShowAdminModal(false)}
+          onSuccess={handleAdminSuccess}
+        />
+
+        <PasswordRecovery visible={showRecoveryModal} onClose={() => setShowRecoveryModal(false)} />
+        <LoadingOverlay visible={isNavigating} />
+>>>>>>> 90e20dc (actualizacion visual)
       </div>
     </>
   )
 }
 
+<<<<<<< HEAD
 export default Login
+=======
+export default Login
+>>>>>>> 90e20dc (actualizacion visual)
