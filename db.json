@@ -1,0 +1,79 @@
+{
+  "users": [
+    {
+      "id": "f4ae",
+      "nombre": "adsa",
+      "apellido": "adsasd",
+      "cedula": "V-12321321",
+      "username": "asdas",
+      "email": "adasd@gmail.com",
+      "semestre": "1",
+      "carrera": "Sistemas",
+      "password": "1234",
+      "role": "student"
+    },
+    {
+      "id": "1309",
+      "nombre": "liander",
+      "apellido": "rincon",
+      "cedula": "V-1234567",
+      "username": "rincon",
+      "email": "rincon@gmail.com",
+      "semestre": "1",
+      "carrera": "Sistemas",
+      "password": "1234",
+      "role": "student"
+    },
+    {
+      "id": "6756",
+      "nombre": "liander",
+      "apellido": "rincon",
+      "cedula": "30163662",
+      "carrera": "Ingeniería de Sistemas",
+      "semestre": "1",
+      "correo": "lianderclaret@gmail.com",
+      "telefono": "04127459619"
+    }
+  ],
+  "posts": [
+    {
+      "id": "88e0",
+      "title": "banda",
+      "body": "hola mundoooo",
+      "mediaUrl": "blob:http://localhost:3000/1ac5a55c-5b39-4086-af35-8f31798553c1",
+      "mediaType": "image/png",
+      "date": "15/1/2026, 3:27:16 p. m."
+    },
+    {
+      "id": "ce46",
+      "title": "holaaa",
+      "body": "como tas",
+      "mediaUrl": "blob:http://localhost:3000/034236ee-b40d-4f73-add1-b488f50a763e",
+      "mediaType": "image/png",
+      "date": "15/1/2026, 3:27:40 p. m."
+    }
+  ],
+  "messages": [
+    {
+      "id": "8cbd",
+      "author": "rincon",
+      "content": "🔥",
+      "timestamp": "11:26:18 a. m.",
+      "likes": 0
+    },
+    {
+      "id": "3a64",
+      "author": "rincon",
+      "content": "🔥",
+      "timestamp": "11:26:19 a. m.",
+      "likes": 0
+    },
+    {
+      "id": "8e8e",
+      "author": "rincon",
+      "content": "🔥",
+      "timestamp": "11:26:20 a. m.",
+      "likes": 1
+    }
+  ]
+}
