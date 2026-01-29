@@ -1,389 +1,539 @@
 import React, { useState, useEffect } from 'react'
 import axios from 'axios'
 import {
-  CButton,
   CCard,
   CCardBody,
   CCardHeader,
   CCol,
-  CForm,
-  CFormInput,
-  CFormSelect,
   CRow,
   CTable,
   CTableBody,
-  CTableDataCell,
   CTableHead,
   CTableHeaderCell,
   CTableRow,
+  CTableDataCell,
+  CButton,
+  CFormInput,
+  CFormSelect,
+  CInputGroup,
+  CInputGroupText,
+  CBadge,
+  CAvatar,
   CModal,
   CModalHeader,
-  CModalTitle,
   CModalBody,
   CModalFooter,
-  CBadge,
-  CTooltip,
+  CSpinner,
+  CContainer,
+  CFormLabel
 } from '@coreui/react'
+import CIcon from '@coreui/icons-react'
+import {
+  cilPeople,
+  cilSearch,
+  cilTrash,
+  cilStar,
+  cilWarning,
+  cilPencil,
+  cilPlus,
+  cilSave,
+  cilUser,        
+  cilCreditCard, 
+  cilAt,         
+  cilBook,       
+  cilLockLocked, 
+  cilXCircle,     
+  cilCheckCircle 
+} from '@coreui/icons'
 
-const UserCrud = () => {
+const Users = () => {
   const API_URL = 'http://localhost:3001/users'
+  
   const [users, setUsers] = useState([])
-  const [form, setForm] = useState({
-    id: null,
+  const [loading, setLoading] = useState(true)
+  const [searchTerm, setSearchTerm] = useState('')
+  
+  // Modales
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false)
+  const [editModalVisible, setEditModalVisible] = useState(false)
+  const [addModalVisible, setAddModalVisible] = useState(false)
+  const [successModalVisible, setSuccessModalVisible] = useState(false)
+
+  const [userToDelete, setUserToDelete] = useState(null)
+  const [userToEdit, setUserToEdit] = useState({})
+
+  // Estado del Nuevo Usuario
+  const [newUser, setNewUser] = useState({
     nombre: '',
     apellido: '',
     cedula: '',
+    username: '',
+    email: '',
+    password: '', 
     carrera: '',
     semestre: '',
-    correo: '',
-    telefono: '',
+    role: 'student', 
+    puntuacion: 0,
+    foto: null
   })
-  
-  const [selectedUser, setSelectedUser] = useState(null)
-  const [modalFormVisible, setModalFormVisible] = useState(false)
-  const [modalViewVisible, setModalViewVisible] = useState(false)
-  const [errorBanner, setErrorBanner] = useState({ message: '', visible: false })
-  const [errorFields, setErrorFields] = useState([])
-  const errorStyle = {
-    boxShadow: '0 0 0 4px rgba(255,165,0,0.18)',
-    borderColor: '#ff8c00',
-    transition: 'box-shadow 300ms, border-color 300ms',
+
+  // Errores y Animación
+  const [errors, setErrors] = useState({})
+  const [shake, setShake] = useState(false) 
+
+  // 1. CARGAR USUARIOS
+  const fetchUsers = async () => {
+    try {
+      const response = await axios.get(API_URL)
+      setUsers(response.data.reverse()) 
+    } catch (error) {
+      console.error('Error cargando usuarios:', error)
+    } finally {
+      setLoading(false)
+    }
   }
-  const [searchTerm, setSearchTerm] = useState('')
 
-  const carreras = ['Ingeniería de Sistemas', 'Ingeniería civil', 'Ingeniería electrica', 'Administración', 'turismo']
-  const semestres = Array.from({ length: 8 }, (_, i) => (i + 1).toString())
-
-  // Cargar usuarios al montar el componente
   useEffect(() => {
     fetchUsers()
   }, [])
 
-  const fetchUsers = async () => {
-    try {
-      const response = await axios.get(API_URL)
-      setUsers(response.data)
-    } catch (error) {
-      console.error('Error cargando usuarios:', error)
-      setErrorBanner({ message: 'Error de conexión con el servidor', visible: true })
+  // --- BUSCADOR INTELIGENTE CON VALIDACIÓN ---
+  const handleSearchChange = (e) => {
+    const value = e.target.value
+    
+    // Si borra todo, permitimos
+    if (value === '') {
+        setSearchTerm('')
+        return
     }
-  }
 
-  const handleChange = (e) => {
-    const { name, value } = e.target
-    if (errorBanner.visible) setErrorBanner({ message: '', visible: false })
-    if (errorFields.includes(name)) setErrorFields((prev) => prev.filter((f) => f !== name))
-    setForm((prev) => ({ ...prev, [name]: value }))
-  }
+    // Detectar si lo que escribe son solo números (posible cédula)
+    const isNumeric = /^\d+$/.test(value)
 
-  const handleNumericChange = (e, name, maxLen) => {
-    const raw = e.target.value || ''
-    const digits = raw.replace(/\D/g, '').slice(0, maxLen)
-    if (errorBanner.visible) setErrorBanner({ message: '', visible: false })
-    if (errorFields.includes(name)) setErrorFields((prev) => prev.filter((f) => f !== name))
-    setForm((prev) => ({ ...prev, [name]: digits }))
-  }
-
-  const handlePasteNumeric = (e, name, maxLen) => {
-    const paste = (e.clipboardData || window.clipboardData).getData('text') || ''
-    if (!/^\d+$/.test(paste)) {
-      e.preventDefault()
-      return
+    if (isNumeric) {
+        // REGLA: Si es número, máximo 8 dígitos
+        if (value.length > 8) return 
+    } else {
+        // REGLA: Si es texto, máximo 40 caracteres
+        if (value.length > 40) return
     }
-    const filtered = paste.replace(/\D/g, '').slice(0, maxLen)
-    e.preventDefault()
-    setForm((prev) => ({ ...prev, [name]: (prev[name] + filtered).slice(0, maxLen) }))
+
+    setSearchTerm(value)
   }
 
+  // 2. FILTRADO
+  const filteredUsers = users.filter(user => {
+    const term = searchTerm.toLowerCase()
+    return (
+      (user.nombre && user.nombre.toLowerCase().includes(term)) ||
+      (user.username && user.username.toLowerCase().includes(term)) ||
+      (user.cedula && user.cedula.toLowerCase().includes(term)) ||
+      (user.email && user.email.toLowerCase().includes(term))
+    )
+  })
+
+  // --- LÓGICA DE VALIDACIÓN FORMULARIO ---
   const validateForm = () => {
-    const { nombre, apellido, cedula, correo, telefono } = form
-    const missing = []
-    if (!nombre) missing.push('nombre')
-    if (!apellido) missing.push('apellido')
-    if (!cedula) missing.push('cedula')
-    if (!correo) missing.push('correo')
-    if (!telefono) missing.push('telefono')
-    if (missing.length > 0) {
-      setErrorFields(missing)
-      setErrorBanner({ message: 'Complete los campos obligatorios.', visible: true })
-      setTimeout(() => {
-        setErrorBanner({ message: '', visible: false })
-        setErrorFields([])
-      }, 3000)
-      return false
-    }
-    if (!/^\d{8}$/.test(cedula)) {
-      setErrorFields(['cedula'])
-      setErrorBanner({ message: 'La cédula debe contener exactamente 8 dígitos.', visible: true })
-      setTimeout(() => {
-        setErrorBanner({ message: '', visible: false })
-        setErrorFields([])
-      }, 3000)
-      return false
-    }
-    if (!/^\d{11}$/.test(telefono)) {
-      setErrorFields(['telefono'])
-      setErrorBanner({ message: 'El teléfono debe contener exactamente 11 dígitos.', visible: true })
-      setTimeout(() => {
-        setErrorBanner({ message: '', visible: false })
-        setErrorFields([])
-      }, 3000)
-      return false
-    }
-    // Verificar duplicados en la lista local (ya cargada)
-    const conflict = users.find((u) => u.id !== form.id && (u.cedula === cedula || u.correo === correo || u.telefono === telefono))
-    if (conflict) {
-      let field = ''
-      let fieldKey = ''
-      if (conflict.cedula === cedula) { field = 'Cédula'; fieldKey = 'cedula' }
-      else if (conflict.correo === correo) { field = 'Correo'; fieldKey = 'correo' }
-      else if (conflict.telefono === telefono) { field = 'Teléfono'; fieldKey = 'telefono' }
-      setErrorFields(fieldKey ? [fieldKey] : [])
-      setErrorBanner({ message: `${field} ya existe en otro registro.`, visible: true })
-      setTimeout(() => {
-        setErrorBanner({ message: '', visible: false })
-        setErrorFields([])
-      }, 3000)
-      return false
-    }
-    return true
+    let newErrors = {}
+    let isValid = true
+
+    // Nombre y Apellido (Solo letras)
+    const textOnlyRegex = /^[a-zA-ZÁÉÍÓÚáéíóúñÑ\s]+$/
+    
+    if (!newUser.nombre.trim()) { newErrors.nombre = "Nombre obligatorio"; isValid = false } 
+    else if (!textOnlyRegex.test(newUser.nombre)) { newErrors.nombre = "Solo se permiten letras"; isValid = false }
+
+    if (!newUser.apellido.trim()) { newErrors.apellido = "Apellido obligatorio"; isValid = false } 
+    else if (!textOnlyRegex.test(newUser.apellido)) { newErrors.apellido = "Solo se permiten letras"; isValid = false }
+
+    // Cédula (7-8 dígitos, Unicidad)
+    const cedulaRegex = /^\d{7,8}$/
+    if (!newUser.cedula) { newErrors.cedula = "Cédula obligatoria"; isValid = false } 
+    else if (!cedulaRegex.test(newUser.cedula)) { newErrors.cedula = "Debe tener 7 u 8 dígitos"; isValid = false } 
+    else if (users.some(u => u.cedula === newUser.cedula)) { newErrors.cedula = "¡Esta cédula ya existe!"; isValid = false }
+
+    // Correo (Formato, Unicidad)
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!newUser.email) { newErrors.email = "Correo obligatorio"; isValid = false } 
+    else if (!emailRegex.test(newUser.email)) { newErrors.email = "Formato inválido"; isValid = false } 
+    else if (users.some(u => u.email === newUser.email)) { newErrors.email = "¡Correo ya registrado!"; isValid = false }
+
+    // Usuario (Unicidad)
+    if (!newUser.username) { newErrors.username = "Usuario requerido"; isValid = false } 
+    else if (users.some(u => u.username === newUser.username)) { newErrors.username = "Usuario ya ocupado"; isValid = false }
+
+    // Otros
+    if (!newUser.password) { newErrors.password = "Contraseña requerida"; isValid = false }
+    if (!newUser.semestre) { newErrors.semestre = "Selecciona semestre"; isValid = false }
+    if (!newUser.carrera) { newErrors.carrera = "Selecciona carrera"; isValid = false }
+
+    setErrors(newErrors)
+    return isValid
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!validateForm()) return
+  // --- LÓGICA DE AGREGAR ---
+  const handleAddChange = (e) => {
+    const { name, value } = e.target
+    // Bloqueos en tiempo real
+    if ((name === 'nombre' || name === 'apellido') && !/^[a-zA-ZÁÉÍÓÚáéíóúñÑ\s]*$/.test(value)) return;
+    if (name === 'cedula' && !/^\d*$/.test(value)) return;
+
+    setNewUser({ ...newUser, [name]: value })
+    if (errors[name]) setErrors({ ...errors, [name]: null })
+  }
+
+  const saveNewUser = async () => {
+    if (!validateForm()) {
+        setShake(true)
+        setTimeout(() => setShake(false), 500)
+        return
+    }
 
     try {
-      if (form.id === null) {
-        // Crear nuevo usuario (POST)
-        const { id, ...newUser } = form // Quitamos el ID null para que json-server lo genere
-        await axios.post(API_URL, newUser)
-      } else {
-        // Editar usuario existente (PUT)
-        await axios.put(`${API_URL}/${form.id}`, form)
+      const userToCreate = {
+        ...newUser,
+        id: Date.now().toString(),
+        role: 'student', 
+        puntuacion: 0
       }
-      fetchUsers() // Recargar datos
-      closeFormModal()
+
+      await axios.post(API_URL, userToCreate)
+      setUsers([userToCreate, ...users])
+      
+      setAddModalVisible(false)
+      setSuccessModalVisible(true)
+
+      setNewUser({
+        nombre: '', apellido: '', cedula: '', username: '', email: '', password: '', carrera: '', semestre: '', role: 'student', puntuacion: 0, foto: null
+      })
+      setErrors({})
+
+      setTimeout(() => { setSuccessModalVisible(false) }, 2500)
+
     } catch (error) {
-      console.error('Error guardando usuario:', error)
-      setErrorBanner({ message: 'Error guardando datos', visible: true })
+      alert("Error de conexión con el servidor")
     }
   }
 
-  const handleEdit = (user) => {
-    setForm(user)
-    setErrorBanner({ message: '', visible: false })
-    setErrorFields([])
-    setModalFormVisible(true)
+  // --- EDITAR Y ELIMINAR ---
+  const openEditModal = (user) => { setUserToEdit(user); setEditModalVisible(true) }
+  const handleEditChange = (e) => { const { name, value } = e.target; setUserToEdit({ ...userToEdit, [name]: value }) }
+  const saveEdit = async () => {
+    try {
+      await axios.put(`${API_URL}/${userToEdit.id}`, userToEdit)
+      setUsers(users.map(u => (u.id === userToEdit.id ? userToEdit : u)))
+      setEditModalVisible(false)
+      alert("Datos actualizados")
+    } catch (error) { alert("Error al guardar") }
   }
-
-  const handleDelete = async (id) => {
-    if (window.confirm('¿Estás seguro de que deseas eliminar este estudiante?')) {
+  const confirmDelete = (user) => { setUserToDelete(user); setDeleteModalVisible(true) }
+  const handleDelete = async () => {
+    if (userToDelete) {
       try {
-        await axios.delete(`${API_URL}/${id}`)
-        fetchUsers() // Recargar datos
-      } catch (error) {
-        console.error('Error eliminando usuario:', error)
-        alert('Error eliminando usuario')
-      }
+        await axios.delete(`${API_URL}/${userToDelete.id}`)
+        setUsers(users.filter(u => u.id !== userToDelete.id))
+        setDeleteModalVisible(false)
+        setUserToDelete(null)
+      } catch (error) { alert('Error al eliminar') }
     }
-  }
-
-  const handleViewMore = (user) => {
-    setSelectedUser(user)
-    setModalViewVisible(true)
-  }
-
-  const closeFormModal = () => {
-    setModalFormVisible(false)
-    setForm({ id: null, nombre: '', apellido: '', cedula: '', carrera: '', semestre: '', correo: '', telefono: '' })
-    setErrorBanner({ message: '', visible: false })
-    setErrorFields([])
-  }
-
-  const filteredUsers = users.filter(
-    (user) =>
-      user.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.cedula.includes(searchTerm)
-  )
-
-  const getCarreraColor = (carrera) => {
-    const colors = { 'Ingeniería de Sistemas': 'primary', 'Administración': 'success', 'turismo': 'info' }
-    return colors[carrera] || 'secondary'
   }
 
   return (
-    <CCard className="shadow-sm">
-      <CCardHeader className="bg-window py-3">
-        <CRow className="align-items-center">
-          <CCol>
-            <h5 className="mb-0 text-primary">Estudiantes registrados</h5>
-          </CCol>
-          <CCol xs="auto" className="d-flex gap-2">
-            <CFormInput
-              type="text"
-              placeholder="Buscar..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              size="sm"
-            />
-            <CTooltip content="Agregar nuevo estudiante">
-              <CButton color="primary" onClick={() => setModalFormVisible(true)}>
-                <span style={{ fontSize: '1.2rem' }}>✎</span>
-              </CButton>
-            </CTooltip>
-          </CCol>
-        </CRow>
-      </CCardHeader>
+    <CContainer fluid>
+      <style>{`
+        /* ANIMACIONES */
+        @keyframes shake {
+          0% { transform: translateX(0); } 25% { transform: translateX(-5px); }
+          50% { transform: translateX(5px); } 75% { transform: translateX(-5px); } 100% { transform: translateX(0); }
+        }
+        .shake-animation .form-control, .shake-animation .form-select {
+          animation: shake 0.4s ease-in-out;
+          border-color: #e55353 !important;
+          background-color: #fff5f5;
+        }
 
-      <CCardBody>
-        <CTable align="middle" hover responsive borderless className="mb-0">
-          <CTableHead className="text-muted border-bottom">
-            <CTableRow>
-              <CTableHeaderCell>Estudiante</CTableHeaderCell>
-              <CTableHeaderCell>Cédula</CTableHeaderCell>
-              <CTableHeaderCell>Carrera</CTableHeaderCell>
-              <CTableHeaderCell className="text-center">Acciones</CTableHeaderCell>
-            </CTableRow>
-          </CTableHead>
-          <CTableBody>
-            {filteredUsers.map((user) => (
-              <CTableRow key={user.id}>
-                <CTableDataCell>
-                  <div className="fw-bold">{user.nombre} {user.apellido}</div>
-                  <div className="small text-muted">{user.correo}</div>
-                </CTableDataCell>
-                <CTableDataCell>{user.cedula}</CTableDataCell>
-                <CTableDataCell>
-                  <CBadge color={getCarreraColor(user.carrera)} shape="pill">
-                    {user.carrera}
-                  </CBadge>
-                  <div className="small text-muted">Semestre {user.semestre}</div>
-                </CTableDataCell>
-                <CTableDataCell className="text-center">
-                  <CButton color="window" size="sm" className="me-1" onClick={() => handleViewMore(user)}>👁️</CButton>
-                  <CButton color="window" size="sm" className="me-1 text-warning" onClick={() => handleEdit(user)}>✏️</CButton>
-                  <CButton color="window" size="sm" className="text-danger" onClick={() => handleDelete(user.id)}>🗑️</CButton>
-                </CTableDataCell>
-              </CTableRow>
-            ))}
-          </CTableBody>
-        </CTable>
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            80% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); }
+        }
+        .success-icon-anim { animation: popIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) both; }
 
-        {/* MODAL PARA FORMULARIO (AGREGAR/EDITAR) */}
-        <CModal backdrop="static" visible={modalFormVisible} onClose={closeFormModal} alignment="center" size="lg">
-          <CModalHeader>
-            <CModalTitle>{form.id ? 'Editar Estudiante' : 'Nuevo Registro'}</CModalTitle>
-          </CModalHeader>
-          <CForm onSubmit={handleSubmit}>
-            <CModalBody>
-              <div
-                style={{
-                  height: 36,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  marginBottom: 8,
-                  transition: 'transform 300ms ease, opacity 300ms ease',
-                  transform: errorBanner.visible ? 'translateY(0)' : 'translateY(-8px)',
-                  opacity: errorBanner.visible ? 1 : 0,
-                  color: '#842029',
-                  background: errorBanner.visible ? '#f8d7da' : 'transparent',
-                  borderRadius: 6,
-                  border: errorBanner.visible ? '1px solid #f5c2c7' : 'none',
-                  fontSize: 14,
-                }}
-              >
-                {errorBanner.visible ? errorBanner.message : ''}
-              </div>
-              <CRow className="g-3">
-                <CCol md={6}>
-                  <label className="small mb-1">Nombre</label>
-                  <CFormInput name="nombre" value={form.nombre} onChange={handleChange} required style={errorFields.includes('nombre') ? errorStyle : {}} />
+        .error-msg { color: #e55353; font-size: 0.75rem; margin-top: 4px; font-weight: 600; display: flex; align-items: center; }
+
+        /* Estilos Generales */
+        .search-bar-custom .input-group-text { background-color: #fff; border: 1px solid #dee2e6; border-right: none; color: #768192; }
+        .search-bar-custom .form-control { background-color: #fff; border: 1px solid #dee2e6; border-left: none; color: #768192; }
+        .bg-box-adaptive { background-color: #f8f9fa; border: 1px solid #dee2e6; }
+        .modal-footer-adaptive { background-color: #f8f9fa; border-top: 1px solid #dee2e6; }
+        .modal-header-custom { background: linear-gradient(90deg, #1f2937 0%, #374151 100%); color: white; border-bottom: none; }
+        .modal-header-custom .btn-close { filter: invert(1) grayscale(100%) brightness(200%); }
+
+        /* Dark Mode */
+        [data-coreui-theme="dark"] .search-bar-custom .input-group-text { background-color: #2a303d; border-color: #3b4b60; color: #e5e7eb; }
+        [data-coreui-theme="dark"] .search-bar-custom .form-control { background-color: #2a303d; border-color: #3b4b60; color: #fff; }
+        [data-coreui-theme="dark"] .table { color: #e5e7eb; }
+        [data-coreui-theme="dark"] .table thead th { background-color: transparent !important; color: #e5e7eb !important; border-bottom-color: #3b4b60; }
+        [data-coreui-theme="dark"] .modal-content { background-color: #1e293b; border: 1px solid #4b5563; color: #e5e7eb; }
+        [data-coreui-theme="dark"] .modal-body .form-control, [data-coreui-theme="dark"] .modal-body .form-select, [data-coreui-theme="dark"] .modal-body .input-group-text { background-color: #374151; border-color: #4b5563; color: #fff; }
+        [data-coreui-theme="dark"] .bg-box-adaptive { background-color: #2a303d !important; border-color: #4b5563 !important; }
+        [data-coreui-theme="dark"] .modal-footer-adaptive { background-color: #1e293b !important; border-top-color: #4b5563 !important; }
+        [data-coreui-theme="dark"] .shake-animation .form-control { background-color: #4a2323 !important; border-color: #e55353 !important; }
+      `}</style>
+
+      <CRow>
+        <CCol xs={12}>
+          <CCard className="mb-4 border-0 shadow-sm">
+            <CCardHeader className="bg-transparent border-0 p-4">
+              <CRow className="align-items-center justify-content-between">
+                <CCol md={5} className="mb-3 mb-md-0">
+                  <h3 className="m-0 fw-bold d-flex align-items-center gap-2">
+                    <CIcon icon={cilPeople} className="text-primary"/> 
+                    Gestión de Estudiantes
+                  </h3>
+                  <small className="text-muted">{filteredUsers.length} estudiantes registrados</small>
                 </CCol>
-                <CCol md={6}>
-                  <label className="small mb-1">Apellido</label>
-                  <CFormInput name="apellido" value={form.apellido} onChange={handleChange} required style={errorFields.includes('apellido') ? errorStyle : {}} />
-                </CCol>
-                <CCol md={6}>
-                  <label className="small mb-1">Cédula</label>
-                  <CFormInput
-                    name="cedula"
-                    value={form.cedula}
-                    onChange={(e) => handleNumericChange(e, 'cedula', 8)}
-                    onPaste={(e) => handlePasteNumeric(e, 'cedula', 8)}
-                    inputMode="numeric"
-                    maxLength={8}
-                    required
-                    style={errorFields.includes('cedula') ? errorStyle : {}}
-                  />
-                </CCol>
-                <CCol md={6}>
-                  <label className="small mb-1">Teléfono</label>
-                  <CFormInput
-                    name="telefono"
-                    value={form.telefono}
-                    onChange={(e) => handleNumericChange(e, 'telefono', 11)}
-                    onPaste={(e) => handlePasteNumeric(e, 'telefono', 11)}
-                    inputMode="tel"
-                    maxLength={11}
-                    required
-                    style={errorFields.includes('telefono') ? errorStyle : {}}
-                  />
-                </CCol>
-                <CCol md={6}>
-                  <label className="small mb-1">Carrera</label>
-                  <CFormSelect name="carrera" value={form.carrera} onChange={handleChange} required style={errorFields.includes('carrera') ? errorStyle : {}}>
-                    <option value="">Seleccionar...</option>
-                    {carreras.map((c, i) => <option key={i} value={c}>{c}</option>)}
-                  </CFormSelect>
-                </CCol>
-                <CCol md={6}>
-                  <label className="small mb-1">Semestre</label>
-                  <CFormSelect name="semestre" value={form.semestre} onChange={handleChange} required style={errorFields.includes('semestre') ? errorStyle : {}}>
-                    <option value="">Seleccionar...</option>
-                    {semestres.map(s => <option key={s} value={s}>Semestre {s}</option>)}
-                  </CFormSelect>
-                </CCol>
-                <CCol md={12}>
-                  <label className="small mb-1">Correo Electrónico</label>
-                  <CFormInput type="email" name="correo" value={form.correo} onChange={handleChange} required style={errorFields.includes('correo') ? errorStyle : {}} />
+                <CCol md={7} className="d-flex justify-content-md-end gap-3 flex-column flex-md-row">
+                  
+                  {/* BUSCADOR INTELIGENTE */}
+                  <CInputGroup className="search-bar-custom shadow-sm rounded" style={{maxWidth: '300px'}}>
+                    <CInputGroupText><CIcon icon={cilSearch} /></CInputGroupText>
+                    <CFormInput 
+                        placeholder="Buscar por nombre o cédula..." 
+                        value={searchTerm} 
+                        onChange={handleSearchChange} // <-- AQUÍ ESTÁ LA VALIDACIÓN DE BÚSQUEDA
+                    />
+                  </CInputGroup>
+
+                  <CButton color="success" className="text-white fw-bold shadow-sm" onClick={() => { setAddModalVisible(true); setErrors({}); }}>
+                    <CIcon icon={cilPlus} className="me-2 fw-bold"/> Nuevo Estudiante
+                  </CButton>
                 </CCol>
               </CRow>
-            </CModalBody>
-            <CModalFooter>
-              <CButton color="secondary" variant="ghost" onClick={closeFormModal}>Cancelar</CButton>
-              <CButton color="primary" type="submit">
-                {form.id ? 'Guardar Cambios' : 'Registrar Estudiante'}
-              </CButton>
-            </CModalFooter>
-          </CForm>
-        </CModal>
-
-        {/* MODAL PARA VER DETALLES */}
-        <CModal visible={modalViewVisible} onClose={() => setModalViewVisible(false)} alignment="center">
-          <CModalHeader>
-            <CModalTitle>Detalles del Estudiante</CModalTitle>
-          </CModalHeader>
-          <CModalBody>
-            {selectedUser && (
-              <div className="p-2">
-                <div className="text-center mb-4">
-                  <div className="display-6">{selectedUser.nombre}</div>
-                  <CBadge color="primary">{selectedUser.carrera}</CBadge>
+            </CCardHeader>
+            <CCardBody className="p-0">
+              {loading ? <div className="text-center py-5"><CSpinner color="primary"/></div> : (
+                <div className="table-responsive">
+                  <CTable hover align="middle" className="mb-0 border-top">
+                    <CTableHead>
+                      <CTableRow>
+                        <CTableHeaderCell className="ps-4 py-3">Estudiante</CTableHeaderCell>
+                        <CTableHeaderCell className="text-center">Semestre</CTableHeaderCell>
+                        <CTableHeaderCell>Info Académica</CTableHeaderCell>
+                        <CTableHeaderCell className="text-center">Rendimiento</CTableHeaderCell>
+                        <CTableHeaderCell className="text-end pe-4">Acciones</CTableHeaderCell>
+                      </CTableRow>
+                    </CTableHead>
+                    <CTableBody>
+                      {filteredUsers.map((item) => (
+                        <CTableRow key={item.id}>
+                          <CTableDataCell className="ps-4 py-3">
+                            <div className="d-flex align-items-center">
+                              <CAvatar src={item.foto} color="primary" textColor="white" size="md" className="me-3">
+                                {item.foto ? null : (item.nombre ? item.nombre.charAt(0).toUpperCase() : 'U')}
+                              </CAvatar>
+                              <div>
+                                <div className="fw-bold">{item.nombre} {item.apellido}</div>
+                                <div className="small text-muted">{item.email}</div>
+                                <div className="small text-primary fw-bold">{item.cedula}</div>
+                              </div>
+                            </div>
+                          </CTableDataCell>
+                          <CTableDataCell className="text-center">
+                            <CBadge color="info" variant="outline" shape="rounded-pill" className="fw-bold">{item.semestre || 'N/A'}</CBadge>
+                          </CTableDataCell>
+                          <CTableDataCell>
+                            <div className="small"><strong>Carrera:</strong> {item.carrera || 'No asignada'}</div>
+                            <div className="small text-muted"><strong>Usuario:</strong> {item.username}</div>
+                          </CTableDataCell>
+                          <CTableDataCell className="text-center">
+                             {item.role !== 'admin' && (
+                                <div className="d-flex flex-column align-items-center">
+                                    <h5 className="mb-0 fw-bold text-warning"><CIcon icon={cilStar} className="me-1"/> {item.puntuacion || 0}</h5>
+                                    <small className="text-muted" style={{fontSize: '0.7rem'}}>Puntos</small>
+                                </div>
+                             )}
+                          </CTableDataCell>
+                          <CTableDataCell className="text-end pe-4">
+                            <div className="d-flex gap-2 justify-content-end">
+                                <CButton color="info" variant="ghost" size="sm" onClick={() => openEditModal(item)}><CIcon icon={cilPencil} /></CButton>
+                                <CButton color="danger" variant="ghost" size="sm" onClick={() => confirmDelete(item)}><CIcon icon={cilTrash} /></CButton>
+                            </div>
+                          </CTableDataCell>
+                        </CTableRow>
+                      ))}
+                    </CTableBody>
+                  </CTable>
                 </div>
-                <hr />
-                <p><strong>Cédula:</strong> {selectedUser.cedula}</p>
-                <p><strong>Correo:</strong> {selectedUser.correo}</p>
-                <p><strong>Teléfono:</strong> {selectedUser.telefono}</p>
-                <p><strong>Semestre:</strong> {selectedUser.semestre}º Semestre</p>
-              </div>
-            )}
-          </CModalBody>
-        </CModal>
-      </CCardBody>
-    </CCard>
+              )}
+            </CCardBody>
+          </CCard>
+        </CCol>
+      </CRow>
+
+      {/* --- MODAL AGREGAR --- */}
+      <CModal visible={addModalVisible} onClose={() => setAddModalVisible(false)} size="lg" backdrop="static">
+        <CModalHeader closeButton className="modal-header-custom">
+            <strong><CIcon icon={cilPlus} className="me-2"/>Registrar Nuevo Estudiante</strong>
+        </CModalHeader>
+        <CModalBody className="p-4">
+            
+            <h6 className="text-muted text-uppercase fw-bold mb-3 small">Información Personal</h6>
+            <CRow className="g-3">
+                <CCol md={6} className={errors.nombre && shake ? 'shake-animation' : ''}>
+                    <CFormLabel>Nombre *</CFormLabel>
+                    <CInputGroup>
+                        <CInputGroupText><CIcon icon={cilUser} /></CInputGroupText>
+                        <CFormInput name="nombre" value={newUser.nombre} onChange={handleAddChange} placeholder="Ej. Juan" invalid={!!errors.nombre}/>
+                    </CInputGroup>
+                    {errors.nombre && <div className="error-msg"><CIcon icon={cilXCircle} size="sm" className="me-1"/>{errors.nombre}</div>}
+                </CCol>
+                <CCol md={6} className={errors.apellido && shake ? 'shake-animation' : ''}>
+                    <CFormLabel>Apellido *</CFormLabel>
+                    <CInputGroup>
+                         <CInputGroupText><CIcon icon={cilUser} /></CInputGroupText>
+                         <CFormInput name="apellido" value={newUser.apellido} onChange={handleAddChange} placeholder="Ej. Pérez" invalid={!!errors.apellido}/>
+                    </CInputGroup>
+                    {errors.apellido && <div className="error-msg"><CIcon icon={cilXCircle} size="sm" className="me-1"/>{errors.apellido}</div>}
+                </CCol>
+                
+                <CCol md={6} className={errors.cedula && shake ? 'shake-animation' : ''}>
+                    <CFormLabel>Cédula * (Solo números)</CFormLabel>
+                    <CInputGroup>
+                         <CInputGroupText><CIcon icon={cilCreditCard} /></CInputGroupText>
+                         <CFormInput name="cedula" value={newUser.cedula} onChange={handleAddChange} placeholder="12345678" maxLength={8} invalid={!!errors.cedula}/>
+                    </CInputGroup>
+                    {errors.cedula && <div className="error-msg"><CIcon icon={cilXCircle} size="sm" className="me-1"/>{errors.cedula}</div>}
+                </CCol>
+                <CCol md={6} className={errors.email && shake ? 'shake-animation' : ''}>
+                    <CFormLabel>Correo Electrónico *</CFormLabel>
+                    <CInputGroup>
+                         <CInputGroupText><CIcon icon={cilAt} /></CInputGroupText>
+                         <CFormInput name="email" value={newUser.email} onChange={handleAddChange} placeholder="correo@ejemplo.com" invalid={!!errors.email}/>
+                    </CInputGroup>
+                    {errors.email && <div className="error-msg"><CIcon icon={cilXCircle} size="sm" className="me-1"/>{errors.email}</div>}
+                </CCol>
+            </CRow>
+
+            <h6 className="text-muted text-uppercase fw-bold mt-4 mb-3 small">Datos Académicos</h6>
+            <CRow className="g-3">
+                <CCol md={6} className={errors.semestre && shake ? 'shake-animation' : ''}>
+                    <CFormLabel>Semestre *</CFormLabel>
+                    <CInputGroup>
+                         <CInputGroupText><CIcon icon={cilBook} /></CInputGroupText>
+                         <CFormSelect name="semestre" value={newUser.semestre} onChange={handleAddChange} invalid={!!errors.semestre}>
+                            <option value="">Seleccionar...</option>
+                            {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (<option key={num} value={`${num}° Semestre`}>{num}° Semestre</option>))}
+                        </CFormSelect>
+                    </CInputGroup>
+                    {errors.semestre && <div className="error-msg"><CIcon icon={cilXCircle} size="sm" className="me-1"/>{errors.semestre}</div>}
+                </CCol>
+
+                <CCol md={6} className={errors.carrera && shake ? 'shake-animation' : ''}>
+                    <CFormLabel>Carrera *</CFormLabel>
+                    <CInputGroup>
+                        <CInputGroupText><CIcon icon={cilBook} /></CInputGroupText>
+                        <CFormSelect name="carrera" value={newUser.carrera} onChange={handleAddChange} invalid={!!errors.carrera}>
+                            <option value="">Seleccionar...</option>
+                            <option value="Ingeniería de Sistemas">Ingeniería de Sistemas</option>
+                            <option value="Ingeniería Civil">Ingeniería Civil</option>
+                            <option value="Ingeniería Eléctrica">Ingeniería Eléctrica</option>
+                            <option value="Licenciatura en Turismo">Licenciatura en Turismo</option>
+                            <option value="Licenciatura en Administración">Licenciatura en Administración</option>
+                        </CFormSelect>
+                    </CInputGroup>
+                    {errors.carrera && <div className="error-msg"><CIcon icon={cilXCircle} size="sm" className="me-1"/>{errors.carrera}</div>}
+                </CCol>
+            </CRow>
+
+            <div className="bg-box-adaptive p-3 rounded mt-4">
+                <h6 className="text-primary fw-bold mb-3 d-flex align-items-center"><CIcon icon={cilLockLocked} className="me-2"/>Credenciales</h6>
+                <CRow className="g-3">
+                    <CCol md={6} className={errors.username && shake ? 'shake-animation' : ''}>
+                        <CFormLabel>Usuario *</CFormLabel>
+                        <CFormInput name="username" value={newUser.username} onChange={handleAddChange} placeholder="usuario123" invalid={!!errors.username}/>
+                        {errors.username && <div className="error-msg"><CIcon icon={cilXCircle} size="sm" className="me-1"/>{errors.username}</div>}
+                    </CCol>
+                    <CCol md={6} className={errors.password && shake ? 'shake-animation' : ''}>
+                        <CFormLabel>Contraseña *</CFormLabel>
+                        <CFormInput name="password" value={newUser.password} onChange={handleAddChange} placeholder="******" invalid={!!errors.password}/>
+                        {errors.password && <div className="error-msg"><CIcon icon={cilXCircle} size="sm" className="me-1"/>{errors.password}</div>}
+                    </CCol>
+                </CRow>
+            </div>
+
+        </CModalBody>
+        <CModalFooter className="modal-footer-adaptive">
+            <CButton color="secondary" variant="ghost" onClick={() => setAddModalVisible(false)}>Cancelar</CButton>
+            <CButton color="success" className="text-white fw-bold px-4" onClick={saveNewUser}>
+                <CIcon icon={cilSave} className="me-2"/> Guardar Estudiante
+            </CButton>
+        </CModalFooter>
+      </CModal>
+
+      {/* --- MODAL ÉXITO (ANIMADO) --- */}
+      <CModal visible={successModalVisible} alignment="center" className="border-0">
+         <CModalBody className="text-center p-5">
+            <div className="mb-4 success-icon-anim">
+                <CIcon icon={cilCheckCircle} size="5xl" className="text-success"/>
+            </div>
+            <h2 className="fw-bold text-success mb-2">¡Registro Exitoso!</h2>
+            <p className="text-muted">El estudiante ha sido creado correctamente en la base de datos.</p>
+         </CModalBody>
+      </CModal>
+
+      {/* MODAL EDITAR */}
+      <CModal visible={editModalVisible} onClose={() => setEditModalVisible(false)} size="lg" backdrop="static">
+        <CModalHeader closeButton><strong>Editar Estudiante</strong></CModalHeader>
+        <CModalBody>
+            <CRow className="g-3">
+                <CCol md={6}><CFormLabel>Nombre</CFormLabel><CFormInput name="nombre" value={userToEdit.nombre} onChange={handleEditChange} /></CCol>
+                <CCol md={6}><CFormLabel>Apellido</CFormLabel><CFormInput name="apellido" value={userToEdit.apellido} onChange={handleEditChange} /></CCol>
+                <CCol md={6}><CFormLabel>Cédula</CFormLabel><CFormInput name="cedula" value={userToEdit.cedula} onChange={handleEditChange} /></CCol>
+                <CCol md={6}><CFormLabel>Usuario</CFormLabel><CFormInput name="username" value={userToEdit.username} onChange={handleEditChange} /></CCol>
+                <CCol md={12}><CFormLabel>Correo</CFormLabel><CFormInput name="email" value={userToEdit.email} onChange={handleEditChange} /></CCol>
+                <CCol md={6}>
+                    <CFormLabel>Carrera</CFormLabel>
+                    <CFormSelect name="carrera" value={userToEdit.carrera} onChange={handleEditChange}>
+                        <option value="Ingeniería de Sistemas">Ingeniería de Sistemas</option>
+                        <option value="Ingeniería Civil">Ingeniería Civil</option>
+                        <option value="Ingeniería Eléctrica">Ingeniería Eléctrica</option>
+                        <option value="Licenciatura en Turismo">Licenciatura en Turismo</option>
+                        <option value="Licenciatura en Administración">Licenciatura en Administración</option>
+                    </CFormSelect>
+                </CCol>
+                <CCol md={6}>
+                    <CFormLabel>Semestre</CFormLabel>
+                    <CFormSelect name="semestre" value={userToEdit.semestre} onChange={handleEditChange}>
+                        <option value="">Seleccionar...</option>
+                        {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (<option key={num} value={`${num}° Semestre`}>{num}° Semestre</option>))}
+                        <option value="Egresado">Egresado</option>
+                    </CFormSelect>
+                </CCol>
+            </CRow>
+        </CModalBody>
+        <CModalFooter className="modal-footer-adaptive">
+            <CButton color="secondary" onClick={() => setEditModalVisible(false)}>Cancelar</CButton>
+            <CButton color="primary" onClick={saveEdit}>Guardar Cambios</CButton>
+        </CModalFooter>
+      </CModal>
+
+      {/* MODAL ELIMINAR */}
+      <CModal visible={deleteModalVisible} onClose={() => setDeleteModalVisible(false)} alignment="center" backdrop="static">
+        <CModalHeader closeButton><strong className="text-danger">Eliminar Estudiante</strong></CModalHeader>
+        <CModalBody className="text-center py-4">
+            <CIcon icon={cilWarning} size="4xl" className="text-danger mb-3"/>
+            <p>¿Estás seguro de que deseas eliminar a <strong>{userToDelete?.nombre}</strong>?</p>
+            <p className="text-muted small">Se perderá todo el progreso y datos.</p>
+        </CModalBody>
+        <CModalFooter className="modal-footer-adaptive">
+            <CButton color="secondary" onClick={() => setDeleteModalVisible(false)}>Cancelar</CButton>
+            <CButton color="danger" className="text-white" onClick={handleDelete}>Eliminar</CButton>
+        </CModalFooter>
+      </CModal>
+      
+    </CContainer>
   )
 }
 
-export default UserCrud
+export default Users

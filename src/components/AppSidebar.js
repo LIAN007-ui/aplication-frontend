@@ -25,11 +25,10 @@ const AppSidebar = () => {
   const userRole = localStorage.getItem('userRole') // 'admin' o 'student'
 
   const filteredNav = navigation.filter((item) => {
-    // Si el item requiere permiso 'admin' y el usuario NO es admin -> OCULTAR
-    if (item.permission === 'admin' && userRole !== 'admin') {
+    // Si el item tiene permiso y no coincide con el rol actual -> ocultar
+    if (item.permission && item.permission !== userRole) {
       return false
     }
-    // Si no -> MOSTRAR
     return true
   })
   // ---------------------------------------
@@ -45,10 +44,13 @@ const AppSidebar = () => {
         dispatch({ type: 'set', sidebarShow: visible })
       }}
     >
-      <CSidebarHeader className="border-bottom">
-        <CSidebarBrand to="/">
+      <CSidebarHeader className="border-bottom" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: 200 }}>
+        <CSidebarBrand to="/" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
           {/* TU LOGO ORIGINAL RECUPERADO */}
-          <CImage align="center" src="src/assets/images/logo.png" height={150} />
+          <CImage
+            src="src/assets/images/logo.png"
+            style={{ display: 'block', margin: '0 auto', height: 150, objectFit: 'contain' }}
+          />
         </CSidebarBrand>
         <CCloseButton
           className="d-lg-none"

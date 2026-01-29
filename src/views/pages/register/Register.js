@@ -101,17 +101,19 @@ const Register = () => {
         return
       }
 
-      // Crear usuario
+      // Crear usuario con TODOS los datos para el perfil
       const newUser = {
+        id: Date.now().toString(), // Generamos ID único
         nombre,
         apellido,
         cedula,
         username,
         email,
-        semestre,
+        semestre: `${semestre}° Semestre`,
         carrera,
         password,
-        role: 'student' // Rol por defecto
+        role: 'student',
+        foto: null
       }
       
       await axios.post(API_URL, newUser)

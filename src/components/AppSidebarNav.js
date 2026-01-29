@@ -8,6 +8,25 @@ import 'simplebar-react/dist/simplebar.min.css'
 import { CBadge, CNavLink, CSidebarNav } from '@coreui/react'
 
 export const AppSidebarNav = ({ items }) => {
+  const getCurrentRole = () => {
+    try {
+      const s = localStorage.getItem('currentUser')
+      if (!s) return null
+      const u = JSON.parse(s)
+      return u && (u.role || u.permission || u.type) ? (u.role || u.permission || u.type) : null
+    } catch (e) {
+      return null
+    }
+  }
+
+  const allowed = (item) => {
+    // If no permission specified, show to everyone
+    if (!item || !item.permission) return true
+    const role = getCurrentRole()
+    if (!role) return false
+    if (Array.isArray(item.permission)) return item.permission.includes(role)
+    return item.permission === role
+  }
   const navLink = (name, icon, badge, indent = false) => {
     return (
       <>
@@ -49,21 +68,20 @@ export const AppSidebarNav = ({ items }) => {
   }
 
   const navGroup = (item, index) => {
+    if (!allowed(item)) return null
     const { component, name, icon, items, to, ...rest } = item
     const Component = component
+    const filteredItems = items?.filter((it) => allowed(it))
     return (
       <Component compact as="div" key={index} toggler={navLink(name, icon)} {...rest}>
-        {items?.map((item, index) =>
-          item.items ? navGroup(item, index) : navItem(item, index, true),
-        )}
+        {filteredItems?.map((child, idx) => (child.items ? navGroup(child, idx) : navItem(child, idx, true)))}
       </Component>
     )
   }
 
   return (
     <CSidebarNav as={SimpleBar}>
-      {items &&
-        items.map((item, index) => (item.items ? navGroup(item, index) : navItem(item, index)))}
+      {items && items.filter((it) => allowed(it)).map((item, index) => (item.items ? navGroup(item, index) : navItem(item, index)))}
     </CSidebarNav>
   )
 }

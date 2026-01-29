@@ -18,6 +18,7 @@ const ModuloUsuarios = React.lazy(() => import('./components/modulos/ModuloUsuar
 const ModuloForoDiscusion = React.lazy(() => import('./components/modulos/ModuloForoDiscusion'))
 const ModuloPublicaciones = React.lazy(() => import('./components/modulos/ModuloPublicaciones'))
 const ModuloJuego = React.lazy(() => import('./components/modulos/ModuloJuego'))
+const Preguntas = React.lazy(() => import('./views/preguntas/Preguntas'))
 
 const routes = [
   { path: '/', exact: true, name: 'Home' },
@@ -27,6 +28,7 @@ const routes = [
   { path: '/users', name: 'UserCrud', element: UserCrud, role: 'admin' },
   { path: '/publications', name: 'AdminPostCrud', element: AdminPostCrud, role: 'admin' },
   { path: '/foro', name: 'ForumCrud', element: ForumCrud, role: 'admin' },
+  { path: '/preguntas', name: 'Banco de Preguntas', element: Preguntas },
   
   // Rutas para Estudiantes
   { path: '/base', name: 'Base', element: Cards, exact: true }, 

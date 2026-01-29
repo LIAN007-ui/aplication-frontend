@@ -38,24 +38,33 @@ const Login = () => {
     }
 
     try {
-      
-      const response = await axios.get(`${API_URL}?username=${username}&password=${password}`)
+      // 1. SEGURIDAD: Buscamos solo por usuario para evitar falsos positivos
+      const response = await axios.get(`${API_URL}?username=${username}`)
       const usersFound = response.data
 
-      if (usersFound.length > 0) {
-      
-        const user = usersFound[0]
-        
+      // 2. VERIFICACIÓN ESTRICTA
+      // Buscamos si alguno de los usuarios encontrados tiene la contraseña EXACTA
+      const validUser = usersFound.find(user => user.password === password)
+
+      if (validUser) {
+        // Guardar sesión y datos COMPLETOS para el perfil
         localStorage.setItem('isAuthenticated', 'true')
-        localStorage.setItem('userRole', 'student') 
-        localStorage.setItem(
-          'currentUser',
-          JSON.stringify({ username: user.username, email: user.email }),
-        )
+        localStorage.setItem('userRole', validUser.role || 'student') 
+        localStorage.setItem('currentUser', JSON.stringify(validUser)) // Guardamos todo el objeto (foto, cedula, etc)
         
         setIsNavigating(true)
-        setTimeout(() => navigate('/base/accordion'), 1000) 
+        
+        // Redirección inteligente según rol
+        setTimeout(() => {
+            if (validUser.role === 'admin') {
+                navigate('/dashboard')
+            } else {
+                navigate('/modulos/usuarios')
+            }
+        }, 1000) 
+
       } else {
+        // Si no se encuentra el usuario O la contraseña no coincide
         triggerError('Usuario o contraseña incorrectos')
       }
     } catch (err) {
@@ -65,9 +74,10 @@ const Login = () => {
   }
 
   const handleAdminSuccess = () => {
-    
     localStorage.setItem('isAuthenticated', 'true')
     localStorage.setItem('userRole', 'admin')
+    // Guardar un usuario admin genérico en localStorage para evitar errores en perfil
+    localStorage.setItem('currentUser', JSON.stringify({ username: 'Administrador', role: 'admin' }))
     
     setShowAdminModal(false)
     setIsNavigating(true)

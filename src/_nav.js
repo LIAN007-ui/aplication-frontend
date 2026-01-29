@@ -40,6 +40,13 @@ const _nav = [
     icon: <CIcon icon={cilNotes} customClassName="nav-icon" />, 
     permission: 'admin', 
   },
+  {
+    component: CNavItem,
+    name: 'Banco de Preguntas',
+    to: '/preguntas',
+    icon: <CIcon icon={cilPuzzle} customClassName="nav-icon" />,
+    permission: 'admin',
+  },
   
   // SECCIÓN ESTUDIANTES 
   {
@@ -47,35 +54,41 @@ const _nav = [
     name: 'Foro Estudiantil',
     to: '/foro',
     icon: <CIcon icon={cilPencil} customClassName="nav-icon" />,
+    permission: 'admin', // oculto para usuarios que no sean admin
   },
 
   {
     component: CNavTitle,
     name: 'Módulos Estudiantiles',
+    permission: 'student',
   },
   {
     component: CNavItem,
-    name: 'Incio',
+    name: 'Contenido',
     to: '/modulos/usuarios',
     icon: <CIcon icon={cilDrop} customClassName="nav-icon" />,
+    permission: 'student',
   },
   {
     component: CNavItem,
     name: 'Foro de Discusión',
     to: '/modulos/foro-discusion',
     icon: <CIcon icon={cilPencil} customClassName="nav-icon" />,
+    permission: 'student',
   },
   {
     component: CNavItem,
     name: 'perfil',
     to: '/modulos/publicaciones',
     icon: <CIcon icon={cilNotes} customClassName="nav-icon" />,
+    permission: 'student',
   },
   {
     component: CNavItem,
     name: 'Juego Educativo',
     to: '/modulos/juego',
     icon: <CIcon icon={cilStar} customClassName="nav-icon" />,
+    permission: 'student',
   },
 
   {
@@ -87,18 +100,19 @@ const _nav = [
     name: 'Semestres',
     to: '/base',
     icon: <CIcon icon={cilPuzzle} customClassName="nav-icon" />,
+    permission: 'student',
     items: [
-      {
+      /*{
         component: CNavItem,
         name: 'Primer semestre',
         to: '/base/accordion',
-      },
+      },*/
       {
         component: CNavItem,
         name: 'Segundo semestre',
         to: '/base/accordion2',
       },
-      {
+      /*{
         component: CNavItem,
         name: 'Tercer semestre',
         to: '/base/accordion3',
@@ -127,7 +141,7 @@ const _nav = [
         component: CNavItem,
         name: 'Octavo semestre',
         to: '/base/accordion8',
-      },
+      },*/
       
     ],
   },
