@@ -13,7 +13,6 @@ const PlanSexto = React.lazy(() => import('./views/plan/PlanSexto'))
 const PlanSeptimo = React.lazy(() => import('./views/plan/PlanSeptimo'))
 const PlanOctavo = React.lazy(() => import('./views/plan/PlanOctavo'))
 const Cards = React.lazy(() => import('./views/base/cards/Cards'))
-const Breadcrumbs = React.lazy(() => import('./views/base/breadcrumbs/Breadcrumbs'))
 const ModuloUsuarios = React.lazy(() => import('./components/modulos/ModuloUsuarios'))
 const ModuloForoDiscusion = React.lazy(() => import('./components/modulos/ModuloForoDiscusion'))
 const ModuloPublicaciones = React.lazy(() => import('./components/modulos/ModuloPublicaciones'))
@@ -44,7 +43,6 @@ const routes = [
   { path: '/modulos/foro-discusion', name: 'Foro de Discusión', element: ModuloForoDiscusion, role: 'student' },
   { path: '/modulos/publicaciones', name: 'Publicaciones', element: ModuloPublicaciones, role: 'student' },
   { path: '/modulos/juego', name: 'Juego Educativo', element: ModuloJuego, role: 'student' },
-   { path: '/base/breadcrumbs', name: 'Breadcrumbs', element: Breadcrumbs },
 ]
  
 
