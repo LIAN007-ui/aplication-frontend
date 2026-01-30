@@ -11,9 +11,9 @@ import {
   CFormInput,
   CRow,
 } from '@coreui/react'
-import PasswordRecovery from '../../../components/PasswordRecovery/PasswordRecovery'
+import PasswordRecovery from '../../../components/RecuperarContraseña/PasswordRecovery'
 import LoadingOverlay from '../../../components/LoadingOverlay/LoadingOverlay'
-import AdminLoginModal from '../../../components/AdminLoginModal/AdminLoginModal'
+import AdminLoginModal from '../../../components/AccesoDocente/AdminLoginModal'
 
 const Login = () => {
   const navigate = useNavigate()

@@ -95,56 +95,7 @@ const _nav = [
     component: CNavTitle,
     name: 'Planes de Evaluación',
   },
-  {
-    component: CNavGroup,
-    name: 'Semestres',
-    to: '/base',
-    icon: <CIcon icon={cilPuzzle} customClassName="nav-icon" />,
-    permission: 'student',
-    items: [
-      /*{
-        component: CNavItem,
-        name: 'Primer semestre',
-        to: '/base/accordion',
-      },*/
-      {
-        component: CNavItem,
-        name: 'Segundo semestre',
-        to: '/base/accordion2',
-      },
-      /*{
-        component: CNavItem,
-        name: 'Tercer semestre',
-        to: '/base/accordion3',
-      },
-      {
-        component: CNavItem,
-        name: 'Cuarto semestre',
-        to: '/base/accordion4',
-      },
-      {
-        component: CNavItem,
-        name: 'Quinto semestre',
-        to: '/base/accordion5',
-      },
-      {
-        component: CNavItem,
-        name: 'Sexto semestre',
-        to: '/base/accordion6',
-      },
-      {
-        component: CNavItem,
-        name: 'Séptimo semestre',
-        to: '/base/accordion7',
-      },
-      {
-        component: CNavItem,
-        name: 'Octavo semestre',
-        to: '/base/accordion8',
-      },*/
-      
-    ],
-  },
+
   
   // errar sesión para todos
   {
