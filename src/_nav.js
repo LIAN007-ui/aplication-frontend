@@ -9,6 +9,7 @@ import {
   cilAccountLogout,
   cilEducation,
   cilUser,
+  cilChartPie,
 } from '@coreui/icons'
 import { CNavItem, CNavTitle } from '@coreui/react'
 
@@ -38,6 +39,12 @@ export const adminNav = [
     name: 'Docentes',
     to: '/admin/docentes',
     icon: <CIcon icon={cilEducation} customClassName="nav-icon" />,
+  },
+  {
+    component: CNavItem,
+    name: 'Reportes',
+    to: '/admin/reportes',
+    icon: <CIcon icon={cilChartPie} customClassName="nav-icon" />,
   },
   {
     component: CNavTitle,
@@ -124,7 +131,7 @@ export const studentNav = [
   },
   {
     component: CNavItem,
-    name: 'Juego Quiz',
+    name: 'Juego',
     to: '/juego',
     icon: <CIcon icon={cilPuzzle} customClassName="nav-icon" />,
   },

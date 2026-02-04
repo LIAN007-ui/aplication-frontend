@@ -1,5 +1,5 @@
 import React, { Suspense } from 'react'
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { CContainer, CSpinner } from '@coreui/react'
 
 // Importar rutas
@@ -7,9 +7,11 @@ import routes from '../routes'
 
 const AppContent = () => {
   const userRole = localStorage.getItem('userRole')
+  const location = useLocation()
+  const isGame = location.pathname === '/juego'
 
   return (
-    <CContainer lg>
+    <CContainer lg={!isGame} fluid={isGame} className={isGame ? 'px-0' : ''}>
       <Suspense fallback={<CSpinner color="primary" />}>
         <Routes>
           {routes.map((route, idx) => {
@@ -23,7 +25,7 @@ const AppContent = () => {
                   element={
                     // Check if route has allowedRoles and user's role is not included
                     (route.allowedRoles && !route.allowedRoles.includes(userRole)) ? (
-                      <Navigate to="/403" replace /> 
+                      <Navigate to="/403" replace />
                     ) : (
                       <route.element />
                     )

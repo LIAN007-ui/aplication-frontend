@@ -11,9 +11,9 @@ import {
   CFormInput,
   CRow,
 } from '@coreui/react'
-import PasswordRecovery from '../../../components/RecuperarContraseña/PasswordRecovery'
+import PasswordRecovery from '../../pages/password-recovery/PasswordRecovery'
 import LoadingOverlay from '../../../components/LoadingOverlay/LoadingOverlay'
-import AdminLoginModal from '../../../components/AccesoDocente/AdminLoginModal'
+import TeacherLoginModal from '../../../components/auth/TeacherLoginModal'
 
 const Login = () => {
   const navigate = useNavigate()
@@ -300,7 +300,7 @@ const Login = () => {
           </CRow>
         </CContainer>
 
-        <AdminLoginModal
+        <TeacherLoginModal
           visible={showAdminModal}
           onClose={() => setShowAdminModal(false)}
           onSuccess={handleAdminSuccess}

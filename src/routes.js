@@ -1,94 +1,100 @@
 import React from 'react'
 
-// Dashboard para Docentes (su semestre)
-const Dashboard = React.lazy(() => import('./views/teacher/TeacherDashboard.jsx'))
+// Teacher Dashboard (Assigned Semester)
+const TeacherDashboard = React.lazy(() => import('./views/teacher/Dashboard.jsx'))
 
-// Dashboard para Super Admin (global)
-const AdminDashboard = React.lazy(() => import('./views/admin/AdminDashboard.jsx'))
+// Super Admin Dashboard (Global)
+const AdminDashboard = React.lazy(() => import('./views/admin/Dashboard.jsx'))
 
-// Módulos de Admin
-const AdminStudents = React.lazy(() => import('./views/admin/AdminStudents.jsx'))
-const AdminTeachers = React.lazy(() => import('./views/admin/AdminTeachers.jsx'))
+// Admin Modules
+const AdminStudents = React.lazy(() => import('./views/admin/Students.jsx'))
+const AdminTeachers = React.lazy(() => import('./views/admin/Teachers.jsx'))
+const AdminReports = React.lazy(() => import('./views/admin/Reports.jsx'))
 
-// Módulos de Docente
-const UserCrud = React.lazy(() => import('./components/ModuloProfesor/users.jsx'))
-const AdminPostCrud = React.lazy(() => import('./components/ModuloProfesor/Publications.jsx'))
-const ForumCrud = React.lazy(() => import('./components/foro/Foro.jsx'))
-const BancoDePreguntas = React.lazy(() => import('./components/ModuloProfesor/BancoDePreguntas.jsx'))
+// Teacher Modules
+const TeacherStudents = React.lazy(() => import('./views/teacher/Students.jsx'))
+const TeacherPublications = React.lazy(() => import('./views/teacher/Publications.jsx'))
+const TeacherQuestions = React.lazy(() => import('./views/teacher/QuestionsBank.jsx'))
+const Forum = React.lazy(() => import('./components/forum/Forum.jsx'))
 
-// Módulos de Estudiante
-const Perfil = React.lazy(() => import('./components/ModulosEstudiantil/Perfil.jsx'))
-const Contenido = React.lazy(() => import('./components/ModulosEstudiantil/Contenido.jsx'))
-const Juego = React.lazy(() => import('./components/ModulosEstudiantil/Juego.jsx'))
+// Student Modules
+const StudentProfile = React.lazy(() => import('./views/student/Profile.jsx'))
+const StudentContent = React.lazy(() => import('./views/student/Content.jsx'))
+const StudentGame = React.lazy(() => import('./views/student/Game.jsx'))
 
 const routes = [
   { path: '/', exact: true, name: 'Home' },
-  
+
   // ============================================
-  // RUTAS SUPER ADMIN
+  // SUPER ADMIN ROUTES
   // ============================================
-  { 
-    path: '/admin/dashboard', 
-    name: 'Dashboard Admin', 
-    element: AdminDashboard 
+  {
+    path: '/admin/dashboard',
+    name: 'Dashboard Admin',
+    element: AdminDashboard
   },
-  { 
-    path: '/admin/estudiantes', 
-    name: 'Estudiantes (Admin)', 
-    element: AdminStudents 
+  {
+    path: '/admin/estudiantes',
+    name: 'Estudiantes (Admin)',
+    element: AdminStudents
   },
-  { 
-    path: '/admin/docentes', 
-    name: 'Docentes', 
-    element: AdminTeachers 
+  {
+    path: '/admin/docentes',
+    name: 'Docentes',
+    element: AdminTeachers
+  },
+  {
+    path: '/admin/reportes',
+    name: 'Reportes y Estadísticas',
+    element: AdminReports
   },
 
   // ============================================
-  // RUTAS DOCENTE
+  // TEACHER ROUTES
   // ============================================
-  { 
-    path: '/dashboard', 
-    name: 'Dashboard', 
-    element: Dashboard 
+  {
+    path: '/dashboard',
+    name: 'Dashboard',
+    element: TeacherDashboard
   },
-  { 
-    path: '/estudiantes', 
-    name: 'Estudiantes', 
-    element: UserCrud 
+  {
+    path: '/estudiantes',
+    name: 'Estudiantes',
+    element: TeacherStudents
   },
-  { 
-    path: '/publicaciones', 
-    name: 'Publicaciones', 
-    element: AdminPostCrud 
+  {
+    path: '/publicaciones',
+    name: 'Publicaciones',
+    element: TeacherPublications
   },
-  { 
-    path: '/banco-preguntas', 
-    name: 'Banco de Preguntas', 
-    element: BancoDePreguntas 
+  {
+    path: '/banco-preguntas',
+    name: 'Banco de Preguntas',
+    element: TeacherQuestions
   },
-  { 
-    path: '/foro', 
-    name: 'Foro', 
-    element: ForumCrud 
+  {
+    path: '/foro',
+    name: 'Foro',
+    element: Forum
   },
 
   // ============================================
-  // RUTAS ESTUDIANTE
+  // STUDENT ROUTES
   // ============================================
-  { 
-    path: '/perfil', 
-    name: 'Mi Perfil', 
-    element: Perfil 
+  {
+    path: '/perfil',
+    name: 'Mi Perfil',
+    element: StudentProfile
   },
-  { 
-    path: '/contenido', 
-    name: 'Contenido', 
-    element: Contenido 
+  {
+    path: '/contenido',
+    name: 'Contenido',
+    element: StudentContent
   },
-  { 
-    path: '/juego', 
-    name: 'Juego Quiz', 
-    element: Juego 
+  {
+    path: '/juego',
+    name: 'Juego Quiz',
+    element: StudentGame
   },
 ]
 
