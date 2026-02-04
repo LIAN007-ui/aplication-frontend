@@ -1,109 +1,156 @@
 import React from 'react'
 import CIcon from '@coreui/icons-react'
 import {
-  cilBell,
-  cilCalculator,
-  cilChartPie,
-  cilCursor,
-  cilDescription,
-  cilDrop,
-  cilExternalLink,
-  cilNotes,
-  cilPencil,
-  cilPuzzle,
   cilSpeedometer,
-  cilStar,
+  cilPeople,
+  cilNotes,
+  cilPuzzle,
+  cilPencil,
+  cilAccountLogout,
+  cilEducation,
+  cilUser,
 } from '@coreui/icons'
-import { CNavGroup, CNavItem, CNavTitle } from '@coreui/react'
+import { CNavItem, CNavTitle } from '@coreui/react'
 
-const _nav = [
-  //SECCIÓN ADMINISTRADOR
+// ============================================
+// NAVEGACIÓN PARA SUPER ADMINISTRADOR (admin)
+// ============================================
+export const adminNav = [
+  {
+    component: CNavItem,
+    name: 'Dashboard',
+    to: '/admin/dashboard',
+    icon: <CIcon icon={cilSpeedometer} customClassName="nav-icon" />,
+    badge: { color: 'danger', text: 'ADMIN' },
+  },
+  {
+    component: CNavTitle,
+    name: 'GESTIÓN DEL SISTEMA',
+  },
+  {
+    component: CNavItem,
+    name: 'Estudiantes',
+    to: '/admin/estudiantes',
+    icon: <CIcon icon={cilPeople} customClassName="nav-icon" />,
+  },
+  {
+    component: CNavItem,
+    name: 'Docentes',
+    to: '/admin/docentes',
+    icon: <CIcon icon={cilEducation} customClassName="nav-icon" />,
+  },
+  {
+    component: CNavTitle,
+    name: 'SESIÓN',
+  },
+  {
+    component: CNavItem,
+    name: 'Cerrar Sesión',
+    to: '/login',
+    icon: <CIcon icon={cilAccountLogout} customClassName="nav-icon" />,
+  },
+]
+
+// ============================================
+// NAVEGACIÓN PARA DOCENTES (teacher)
+// ============================================
+export const teacherNav = [
   {
     component: CNavItem,
     name: 'Dashboard',
     to: '/dashboard',
     icon: <CIcon icon={cilSpeedometer} customClassName="nav-icon" />,
-    badge: { color: 'info', text: 'ADMIN' },
-    permission: 'admin', 
+    badge: { color: 'info', text: 'DOCENTE' }, // Se sobrescribe en AppSidebar
+  },
+  {
+    component: CNavTitle,
+    name: 'MI SEMESTRE',
   },
   {
     component: CNavItem,
     name: 'Estudiantes',
-    to: '/users',
-    icon: <CIcon icon={cilDrop} customClassName="nav-icon" />,
-    permission: 'admin', // <--- SOLO ADMIN
+    to: '/estudiantes',
+    icon: <CIcon icon={cilPeople} customClassName="nav-icon" />,
   },
   {
     component: CNavItem,
     name: 'Publicaciones',
-    to: '/publications',
-    icon: <CIcon icon={cilNotes} customClassName="nav-icon" />, 
-    permission: 'admin', 
+    to: '/publicaciones',
+    icon: <CIcon icon={cilNotes} customClassName="nav-icon" />,
   },
   {
     component: CNavItem,
     name: 'Banco de Preguntas',
-    to: '/preguntas',
+    to: '/banco-preguntas',
     icon: <CIcon icon={cilPuzzle} customClassName="nav-icon" />,
-    permission: 'admin',
   },
-  
-  // SECCIÓN ESTUDIANTES 
   {
     component: CNavItem,
     name: 'Foro Estudiantil',
     to: '/foro',
     icon: <CIcon icon={cilPencil} customClassName="nav-icon" />,
-    permission: 'admin', // oculto para usuarios que no sean admin
   },
-
   {
     component: CNavTitle,
-    name: 'Módulos Estudiantiles',
-    permission: 'student',
+    name: 'SESIÓN',
   },
-  {
-    component: CNavItem,
-    name: 'Contenido',
-    to: '/modulos/usuarios',
-    icon: <CIcon icon={cilDrop} customClassName="nav-icon" />,
-    permission: 'student',
-  },
-  {
-    component: CNavItem,
-    name: 'Foro de Discusión',
-    to: '/modulos/foro-discusion',
-    icon: <CIcon icon={cilPencil} customClassName="nav-icon" />,
-    permission: 'student',
-  },
-  {
-    component: CNavItem,
-    name: 'perfil',
-    to: '/modulos/publicaciones',
-    icon: <CIcon icon={cilNotes} customClassName="nav-icon" />,
-    permission: 'student',
-  },
-  {
-    component: CNavItem,
-    name: 'Juego Educativo',
-    to: '/modulos/juego',
-    icon: <CIcon icon={cilStar} customClassName="nav-icon" />,
-    permission: 'student',
-  },
-
-  {
-    component: CNavTitle,
-    name: 'Planes de Evaluación',
-  },
-
-  
-  // errar sesión para todos
   {
     component: CNavItem,
     name: 'Cerrar Sesión',
     to: '/login',
-    icon: <CIcon icon={cilExternalLink} customClassName="nav-icon" />,
+    icon: <CIcon icon={cilAccountLogout} customClassName="nav-icon" />,
   },
 ]
+
+// ============================================
+// NAVEGACIÓN PARA ESTUDIANTES (student)
+// ============================================
+export const studentNav = [
+  {
+    component: CNavItem,
+    name: 'Mi Perfil',
+    to: '/perfil',
+    icon: <CIcon icon={cilUser} customClassName="nav-icon" />,
+  },
+  {
+    component: CNavTitle,
+    name: 'APRENDIZAJE',
+  },
+  {
+    component: CNavItem,
+    name: 'Contenido',
+    to: '/contenido',
+    icon: <CIcon icon={cilNotes} customClassName="nav-icon" />,
+  },
+  {
+    component: CNavItem,
+    name: 'Juego Quiz',
+    to: '/juego',
+    icon: <CIcon icon={cilPuzzle} customClassName="nav-icon" />,
+  },
+  {
+    component: CNavTitle,
+    name: 'COMUNIDAD',
+  },
+  {
+    component: CNavItem,
+    name: 'Foro de Discusión',
+    to: '/foro',
+    icon: <CIcon icon={cilPencil} customClassName="nav-icon" />,
+  },
+  {
+    component: CNavTitle,
+    name: 'SESIÓN',
+  },
+  {
+    component: CNavItem,
+    name: 'Cerrar Sesión',
+    to: '/login',
+    icon: <CIcon icon={cilAccountLogout} customClassName="nav-icon" />,
+  },
+]
+
+// Exportación por defecto (para compatibilidad)
+const _nav = teacherNav
 
 export default _nav

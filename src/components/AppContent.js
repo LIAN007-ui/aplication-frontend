@@ -21,8 +21,9 @@ const AppContent = () => {
                   exact={route.exact}
                   name={route.name}
                   element={
-                    (route.role && route.role !== userRole) ? (
-                      <Navigate to="/404" replace /> 
+                    // Check if route has allowedRoles and user's role is not included
+                    (route.allowedRoles && !route.allowedRoles.includes(userRole)) ? (
+                      <Navigate to="/403" replace /> 
                     ) : (
                       <route.element />
                     )
@@ -31,7 +32,7 @@ const AppContent = () => {
               )
             )
           })}
-          <Route path="/" element={<Navigate to="dashboard" replace />} />
+          <Route path="/" element={<Navigate to="/login" replace />} />
         </Routes>
       </Suspense>
     </CContainer>

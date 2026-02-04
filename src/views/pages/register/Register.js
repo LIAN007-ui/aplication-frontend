@@ -90,13 +90,17 @@ const Register = () => {
     try {
       // Verificar duplicados en el servidor
       const { data: userCheck } = await axios.get(`${API_URL}?username=${username}`)
-      const { data: cedulaCheck } = await axios.get(`${API_URL}?cedula=${cedula}`)
-
+      const { data: allUsers } = await axios.get(API_URL)
+      
+      // Verificar si el username ya existe
       if (userCheck.length > 0) {
         triggerError('El usuario ya existe')
         return
       }
-      if (cedulaCheck.length > 0) {
+      
+      // Verificar si la cédula ya existe (comparación exacta)
+      const cedulaExists = allUsers.some(user => user.cedula === cedula)
+      if (cedulaExists) {
         triggerError('Esta cédula ya está registrada')
         return
       }

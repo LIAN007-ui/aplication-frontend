@@ -21,11 +21,23 @@ import {
 } from '@coreui/icons'
 
 const Preguntas = () => {
-  const API_URL = 'http://localhost:3001/preguntas'
+  const API_URL = 'http://localhost:3001/questions'
   
   const [questions, setQuestions] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+  
+  // Obtener datos del docente actual
+  const getCurrentUser = () => {
+    try {
+      const userData = localStorage.getItem('currentUser')
+      return userData ? JSON.parse(userData) : null
+    } catch {
+      return null
+    }
+  }
+  const currentUser = getCurrentUser()
+  const teacherSemester = currentUser?.assignedSemester || null
   
   // PAGINACIÓN INTELIGENTE
   const [currentPage, setCurrentPage] = useState(1)
@@ -46,11 +58,15 @@ const Preguntas = () => {
   const [errors, setErrors] = useState({})
   const [shake, setShake] = useState(false)
 
-  // 1. CARGAR DATOS
+  // 1. CARGAR DATOS (solo preguntas del semestre del docente)
   const fetchQuestions = async () => {
     try {
       const response = await axios.get(API_URL)
-      setQuestions(response.data.reverse())
+      // Filtrar solo preguntas del semestre asignado al docente
+      const filteredQuestions = teacherSemester 
+        ? response.data.filter(q => q.semester === teacherSemester)
+        : response.data
+      setQuestions(filteredQuestions.reverse())
     } catch (error) { console.error(error) } 
     finally { setLoading(false) }
   }
@@ -130,7 +146,9 @@ const Preguntas = () => {
     const payload = {
         question: currentQ.question,
         options: [currentQ.option1, currentQ.option2, currentQ.option3, currentQ.option4],
-        answer: currentQ.answer
+        answer: currentQ.answer,
+        semester: teacherSemester, // Asignar al semestre del docente
+        teacherId: currentUser?.id || null
     }
     try {
         if (isEditing) {

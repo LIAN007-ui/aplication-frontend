@@ -48,7 +48,8 @@ const Dashboard = () => {
     const fetchData = async () => {
       try {
         const response = await axios.get(API_URL)
-        const users = response.data.filter(u => u.role !== 'admin') // Ignorar admin
+        // Filtrar solo estudiantes del primer semestre
+        const users = response.data.filter(u => u.role === 'student' && u.semestre === '1° Semestre')
         
         const total = users.length
         

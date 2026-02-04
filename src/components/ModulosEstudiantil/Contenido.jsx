@@ -50,35 +50,35 @@ const ModuloUsuarios = () => {
   // --- CONEXIÓN DE DATOS ---
   const fetchPublicaciones = async () => {
     try {
-      const response = await axios.get('http://localhost:3001/posts')
+      // Obtener el semestre del estudiante actual
+      let userSemester = null
+      const storedUser = localStorage.getItem('currentUser')
+      if (storedUser) {
+        const user = JSON.parse(storedUser)
+        // Extraer el número del semestre del formato "X° Semestre"
+        if (user.semestre) {
+          const match = user.semestre.match(/(\d+)/)
+          userSemester = match ? match[1] : null
+        }
+      }
+
+      // Cargar publicaciones del endpoint correcto
+      let url = 'http://localhost:3001/publications'
+      if (userSemester) {
+        url += `?semester=${userSemester}`
+      }
+      
+      const response = await axios.get(url)
       
       const dataFormateada = response.data.map(post => {
-        let tipoSimple = 'otro'
-        const url = post.mediaUrl || ''
-        const mediaType = post.mediaType || ''
-
-        // Detección robusta: preferimos mediaType si está presente,
-        // pero también aceptamos data URIs y extensiones en la URL.
-        if (mediaType) {
-          if (mediaType.startsWith('image/')) tipoSimple = 'imagen'
-          else if (mediaType.startsWith('video/')) tipoSimple = 'video'
-          else if (mediaType === 'application/pdf') tipoSimple = 'pdf'
-          else if (mediaType.includes('word') || mediaType.includes('doc')) tipoSimple = 'word'
-        } else if (url) {
-          const lower = url.toLowerCase()
-          if (lower.startsWith('data:image') || /\.(jpg|jpeg|png|gif|webp|bmp)(\?|$)/.test(lower)) tipoSimple = 'imagen'
-          else if (lower.startsWith('data:video') || /\.(mp4|webm|ogg)(\?|$)/.test(lower)) tipoSimple = 'video'
-          else if (lower.startsWith('data:application/pdf') || /\.(pdf)(\?|$)/.test(lower)) tipoSimple = 'pdf'
-          else if (lower.includes('word') || /\.(doc|docx)(\?|$)/.test(lower)) tipoSimple = 'word'
-        }
-
         return {
             id: post.id,
             titulo: post.title,
-            descripcion: post.body,
-            url: post.mediaUrl,
-            tipo: tipoSimple,
-            fecha: post.date
+            descripcion: post.content,
+            url: post.mediaUrl || null,
+            tipo: post.mediaUrl ? 'pdf' : 'texto',
+            fecha: post.createdAt ? new Date(post.createdAt).toLocaleDateString('es-VE') : '',
+            autor: post.teacherName || 'Docente'
         }
       })
       setPublicaciones(dataFormateada.reverse())
@@ -211,6 +211,21 @@ const ModuloUsuarios = () => {
             </div>
           )
         }
+      case 'texto':
+        return (
+          <div className="p-4">
+            <div className="bg-white rounded-4 p-4 shadow-sm">
+              <p className="fs-5 mb-0" style={{ whiteSpace: 'pre-wrap' }}>
+                {archivoSeleccionado.descripcion}
+              </p>
+              {archivoSeleccionado.autor && (
+                <p className="text-muted mt-3 mb-0">
+                  <strong>Publicado por:</strong> {archivoSeleccionado.autor}
+                </p>
+              )}
+            </div>
+          </div>
+        )
       default:
         return (
             <div className="text-center py-5">
@@ -226,6 +241,7 @@ const ModuloUsuarios = () => {
       case 'video': return '🎥';
       case 'word': return '📝';
       case 'imagen': return '🖼️';
+      case 'texto': return '📰';
       default: return '📎';
     }
   }

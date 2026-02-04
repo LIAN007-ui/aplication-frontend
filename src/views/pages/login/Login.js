@@ -40,11 +40,16 @@ const Login = () => {
     try {
       // 1. SEGURIDAD: Buscamos solo por usuario para evitar falsos positivos
       const response = await axios.get(`${API_URL}?username=${username}`)
-      const usersFound = response.data
+      console.log('Respuesta del servidor:', response.data)
+      // Asegurar que usersFound sea siempre un array
+      const usersFound = Array.isArray(response.data) ? response.data : [response.data].filter(Boolean)
+      console.log('Usuarios encontrados:', usersFound)
+      console.log('Contraseña ingresada:', password)
 
       // 2. VERIFICACIÓN ESTRICTA
       // Buscamos si alguno de los usuarios encontrados tiene la contraseña EXACTA
-      const validUser = usersFound.find(user => user.password === password)
+      const validUser = usersFound.find(user => user && user.password === password)
+      console.log('Usuario válido:', validUser)
 
       if (validUser) {
         // Guardar sesión y datos COMPLETOS para el perfil
@@ -54,13 +59,16 @@ const Login = () => {
         
         setIsNavigating(true)
         
-        // Redirección inteligente según rol
+        // Redirección según rol
+        let targetDashboard = '/perfil' // Por defecto estudiante
+        if (validUser.role === 'admin') {
+          targetDashboard = '/admin/dashboard'
+        } else if (validUser.role === 'teacher') {
+          targetDashboard = '/dashboard'
+        }
+        
         setTimeout(() => {
-            if (validUser.role === 'admin') {
-                navigate('/dashboard')
-            } else {
-                navigate('/modulos/usuarios')
-            }
+            navigate(targetDashboard)
         }, 1000) 
 
       } else {
@@ -81,7 +89,7 @@ const Login = () => {
     
     setShowAdminModal(false)
     setIsNavigating(true)
-    setTimeout(() => navigate('/dashboard'), 1000)
+    setTimeout(() => navigate('/admin/dashboard'), 1000)
   }
 
   const triggerError = (msg) => {

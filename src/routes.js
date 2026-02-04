@@ -1,34 +1,96 @@
 import React from 'react'
 
-const Dashboard = React.lazy(() => import('./views/dashboard/Dashboard'))
+// Dashboard para Docentes (su semestre)
+const Dashboard = React.lazy(() => import('./views/teacher/TeacherDashboard.jsx'))
+
+// Dashboard para Super Admin (global)
+const AdminDashboard = React.lazy(() => import('./views/admin/AdminDashboard.jsx'))
+
+// Módulos de Admin
+const AdminStudents = React.lazy(() => import('./views/admin/AdminStudents.jsx'))
+const AdminTeachers = React.lazy(() => import('./views/admin/AdminTeachers.jsx'))
+
+// Módulos de Docente
 const UserCrud = React.lazy(() => import('./components/ModuloProfesor/users.jsx'))
 const AdminPostCrud = React.lazy(() => import('./components/ModuloProfesor/Publications.jsx'))
 const ForumCrud = React.lazy(() => import('./components/foro/Foro.jsx'))
-const Cards = React.lazy(() => import('./views/base/cards/Cards'))
-const ModuloUsuarios = React.lazy(() => import('./components/ModulosEstudiantil/Contenido.jsx'))
-const ModuloForoDiscusion = React.lazy(() => import('./components/ModulosEstudiantil/ForoDiscusion.jsx'))
-const ModuloPublicaciones = React.lazy(() => import('./components/ModulosEstudiantil/Perfil.jsx'))
-const ModuloJuego = React.lazy(() => import('./components/ModulosEstudiantil/Juego.jsx'))
-const Preguntas = React.lazy(() => import('./components/ModuloProfesor/BancoDePreguntas.jsx'))
+const BancoDePreguntas = React.lazy(() => import('./components/ModuloProfesor/BancoDePreguntas.jsx'))
+
+// Módulos de Estudiante
+const Perfil = React.lazy(() => import('./components/ModulosEstudiantil/Perfil.jsx'))
+const Contenido = React.lazy(() => import('./components/ModulosEstudiantil/Contenido.jsx'))
+const Juego = React.lazy(() => import('./components/ModulosEstudiantil/Juego.jsx'))
 
 const routes = [
   { path: '/', exact: true, name: 'Home' },
   
-  // Rutas SOLO para Administradores
-  { path: '/dashboard', name: 'Dashboard', element: Dashboard, role: 'admin' },
-  { path: '/users', name: 'UserCrud', element: UserCrud, role: 'admin' },
-  { path: '/publications', name: 'AdminPostCrud', element: AdminPostCrud, role: 'admin' },
-  { path: '/foro', name: 'ForumCrud', element: ForumCrud, role: 'admin' },
-  { path: '/preguntas', name: 'Banco de Preguntas', element: Preguntas },
-  
-  // Rutas para Estudiantes
-  { path: '/base', name: 'Base', element: Cards, exact: true }, 
-  { path: '/modulos/usuarios', name: 'Usuarios', element: ModuloUsuarios, role: 'student' },
-  { path: '/modulos/foro-discusion', name: 'Foro de Discusión', element: ModuloForoDiscusion, role: 'student' },
-  { path: '/modulos/publicaciones', name: 'Publicaciones', element: ModuloPublicaciones, role: 'student' },
-  { path: '/modulos/juego', name: 'Juego Educativo', element: ModuloJuego, role: 'student' },
-]
- 
+  // ============================================
+  // RUTAS SUPER ADMIN
+  // ============================================
+  { 
+    path: '/admin/dashboard', 
+    name: 'Dashboard Admin', 
+    element: AdminDashboard 
+  },
+  { 
+    path: '/admin/estudiantes', 
+    name: 'Estudiantes (Admin)', 
+    element: AdminStudents 
+  },
+  { 
+    path: '/admin/docentes', 
+    name: 'Docentes', 
+    element: AdminTeachers 
+  },
 
+  // ============================================
+  // RUTAS DOCENTE
+  // ============================================
+  { 
+    path: '/dashboard', 
+    name: 'Dashboard', 
+    element: Dashboard 
+  },
+  { 
+    path: '/estudiantes', 
+    name: 'Estudiantes', 
+    element: UserCrud 
+  },
+  { 
+    path: '/publicaciones', 
+    name: 'Publicaciones', 
+    element: AdminPostCrud 
+  },
+  { 
+    path: '/banco-preguntas', 
+    name: 'Banco de Preguntas', 
+    element: BancoDePreguntas 
+  },
+  { 
+    path: '/foro', 
+    name: 'Foro', 
+    element: ForumCrud 
+  },
+
+  // ============================================
+  // RUTAS ESTUDIANTE
+  // ============================================
+  { 
+    path: '/perfil', 
+    name: 'Mi Perfil', 
+    element: Perfil 
+  },
+  { 
+    path: '/contenido', 
+    name: 'Contenido', 
+    element: Contenido 
+  },
+  { 
+    path: '/juego', 
+    name: 'Juego Quiz', 
+    element: Juego 
+  },
+]
 
 export default routes
+

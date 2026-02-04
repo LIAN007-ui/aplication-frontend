@@ -71,7 +71,7 @@ const PerfilEstudiantil = () => {
                     username: data.username || '',
                     email: data.email || '',
                     carrera: data.carrera || 'Ingeniería de Sistemas',
-                    semestre: data.semestre || 'Estudiante Activo',
+                    semestre: data.semester ? `${data.semester}° Semestre` : (data.semestre || 'Estudiante Activo'),
                     cedula: data.cedula || 'Sin Cédula',
                     foto: data.foto || null,
                     puntuacion: data.puntuacion || 0

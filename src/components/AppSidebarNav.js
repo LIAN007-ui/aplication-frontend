@@ -20,12 +20,11 @@ export const AppSidebarNav = ({ items }) => {
   }
 
   const allowed = (item) => {
-    // If no permission specified, show to everyone
-    if (!item || !item.permission) return true
+    // If no allowedRoles specified, show to everyone
+    if (!item || !item.allowedRoles) return true
     const role = getCurrentRole()
     if (!role) return false
-    if (Array.isArray(item.permission)) return item.permission.includes(role)
-    return item.permission === role
+    return item.allowedRoles.includes(role)
   }
   const navLink = (name, icon, badge, indent = false) => {
     return (
@@ -48,7 +47,7 @@ export const AppSidebarNav = ({ items }) => {
   }
 
   const navItem = (item, index, indent = false) => {
-    const { component, name, badge, icon, ...rest } = item
+    const { component, name, badge, icon, allowedRoles, ...rest } = item
     const Component = component
     return (
       <Component as="div" key={index}>
@@ -69,7 +68,7 @@ export const AppSidebarNav = ({ items }) => {
 
   const navGroup = (item, index) => {
     if (!allowed(item)) return null
-    const { component, name, icon, items, to, ...rest } = item
+    const { component, name, icon, items, to, allowedRoles, ...rest } = item
     const Component = component
     const filteredItems = items?.filter((it) => allowed(it))
     return (

@@ -8,7 +8,7 @@ import { cilStar, cilClock, cilList, cilCheck, cilX } from '@coreui/icons'
 
 const ModuloJuego = () => {
   const API_URL_USERS = 'http://localhost:3001/users'
-  const API_URL_QUESTIONS = 'http://localhost:3001/preguntas' // <-- NUEVA URL
+  const API_URL_QUESTIONS = 'http://localhost:3001/questions'
 
   const [masterQuestions, setMasterQuestions] = useState([]) // <-- Estado para las preguntas de BD
   const [questions, setQuestions] = useState([])
@@ -28,10 +28,21 @@ const ModuloJuego = () => {
       try {
         // A. Cargar Usuario
         const storedUserStr = localStorage.getItem('currentUser')
+        let userSemester = null
+        
         if (storedUserStr && storedUserStr !== "undefined") {
           const storedUser = JSON.parse(storedUserStr)
           if (storedUser && storedUser.id) {
             setUserId(storedUser.id)
+            
+            // Obtener el número del semestre del formato "X° Semestre"
+            if (storedUser.semestre) {
+              const match = storedUser.semestre.match(/(\d+)/)
+              if (match) {
+                userSemester = match[1]
+              }
+            }
+            
             try {
                 const { data } = await axios.get(`${API_URL_USERS}/${storedUser.id}`)
                 setHighScore(data.puntuacion || 0)
@@ -39,13 +50,20 @@ const ModuloJuego = () => {
           }
         }
 
-        // B. Cargar Preguntas de la BD
+        // B. Cargar Preguntas de la BD (filtradas por semestre del estudiante)
         const qResponse = await axios.get(API_URL_QUESTIONS)
-        if (qResponse.data && qResponse.data.length > 0) {
-            setMasterQuestions(qResponse.data)
+        let filteredQuestions = qResponse.data
+        
+        // Filtrar por semestre si el estudiante tiene uno asignado
+        if (userSemester && qResponse.data) {
+          filteredQuestions = qResponse.data.filter(q => q.semester === userSemester)
+        }
+        
+        if (filteredQuestions && filteredQuestions.length > 0) {
+            setMasterQuestions(filteredQuestions)
             setGameState('START') // Solo iniciamos si hay preguntas
         } else {
-            alert("El administrador aún no ha cargado preguntas.")
+            alert("El docente aún no ha cargado preguntas para tu semestre.")
         }
 
       } catch (e) {
@@ -76,10 +94,14 @@ const ModuloJuego = () => {
     const shuffled = [...masterQuestions]
       .sort(() => Math.random() - 0.5)
       .slice(0, count) 
-      .map(q => ({
-        ...q,
-        options: [...q.options].sort(() => Math.random() - 0.5)
-      }))
+      .map(q => {
+        // La respuesta correcta ya está guardada como texto en q.answer
+        // Solo necesitamos barajar las opciones
+        return {
+          ...q,
+          options: [...q.options].sort(() => Math.random() - 0.5)
+        }
+      })
 
     setQuestions(shuffled)
     setGameState('PLAYING')

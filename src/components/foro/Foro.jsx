@@ -79,21 +79,55 @@ const ForumCrud = () => {
   const [searchText, setSearchText] = useState('')
   const [loading, setLoading] = useState(true)
   const [showEmojiPicker, setShowEmojiPicker] = useState(false)
+  const [userSemester, setUserSemester] = useState(null) // Semestre del usuario actual
 
   // Estados Modal
   const [deleteModalVisible, setDeleteModalVisible] = useState(false)
   const [msgToDelete, setMsgToDelete] = useState(null)
   const [deleteContext, setDeleteContext] = useState('own')
 
-  // --- CARGA DE DATOS ---
+  // Función para extraer el número del semestre
+  const extractSemesterNumber = (semestreStr) => {
+    if (!semestreStr) return null
+    const match = semestreStr.match(/(\d+)/)
+    return match ? match[1] : null
+  }
+
+  // --- CARGA DE DATOS (filtrado por semestre) ---
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Obtener semestre del usuario actual
+        let currentSemester = null
+        const storedUser = localStorage.getItem('currentUser')
+        const userRole = localStorage.getItem('userRole')
+        
+        if (storedUser) {
+          const user = JSON.parse(storedUser)
+          // Si es estudiante, extraer del campo 'semestre' (formato "X° Semestre")
+          if (user.semestre) {
+            currentSemester = extractSemesterNumber(user.semestre)
+          }
+          // Si es docente, usar 'assignedSemester' directamente
+          else if (user.assignedSemester) {
+            currentSemester = user.assignedSemester
+          }
+        }
+        setUserSemester(currentSemester)
+
         const [resMessages, resUsers] = await Promise.all([
           axios.get(API_URL_MESSAGES),
           axios.get(API_URL_USERS)
         ])
-        setDiscussions(Array.isArray(resMessages.data) ? resMessages.data : [])
+        
+        // Filtrar mensajes por semestre del usuario
+        let filteredMessages = Array.isArray(resMessages.data) ? resMessages.data : []
+        if (currentSemester && userRole !== 'admin') {
+          filteredMessages = filteredMessages.filter(msg => 
+            msg.semester === currentSemester || !msg.semester // Incluir mensajes antiguos sin semestre
+          )
+        }
+        setDiscussions(filteredMessages)
         
         const userMap = {}
         if (Array.isArray(resUsers.data)) {
@@ -154,6 +188,9 @@ const ForumCrud = () => {
         setDeleteContext('own')
     } else if (myRole === 'admin') {
         setDeleteContext('admin')
+    } else if (myRole === 'teacher') {
+        // Los docentes pueden eliminar mensajes de estudiantes en su semestre
+        setDeleteContext('teacher')
     } else {
         return
     }
@@ -164,12 +201,13 @@ const ForumCrud = () => {
   const confirmDelete = async () => {
     if (!msgToDelete) return
     try {
-        if (deleteContext === 'admin') {
+        if (deleteContext === 'admin' || deleteContext === 'teacher') {
             const currentMsg = discussions.find(d => d.id === msgToDelete)
             const tombstoneMsg = {
                 ...currentMsg,
-                content: "🚫 Mensaje eliminado por la administración",
-                deletedByAdmin: true
+                content: deleteContext === 'admin' ? "🚫 Mensaje eliminado por la administración" : "🚫 Mensaje eliminado por el docente",
+                deletedByAdmin: deleteContext === 'admin',
+                deletedByTeacher: deleteContext === 'teacher'
             }
             await axios.put(`${API_URL_MESSAGES}/${msgToDelete}`, tombstoneMsg)
             setDiscussions(discussions.map(d => d.id === msgToDelete ? tombstoneMsg : d))
@@ -200,14 +238,33 @@ const ForumCrud = () => {
     } catch (e) {}
     
     let authorName = 'Anónimo'
+    let isTeacher = false
     if (userRole === 'admin') authorName = 'Admin'
+    else if (userRole === 'teacher') {
+      // Intentar obtener el nombre del docente de diferentes campos posibles
+      console.log('Datos del docente:', currentUser)
+      authorName = currentUser?.name || currentUser?.nombre || currentUser?.username || 'Docente'
+      isTeacher = true
+    }
     else if (currentUser && currentUser.username) authorName = currentUser.username
+
+    // Obtener el semestre para el mensaje
+    let messageSemester = userSemester
+    if (currentUser) {
+      if (currentUser.semestre) {
+        messageSemester = extractSemesterNumber(currentUser.semestre)
+      } else if (currentUser.assignedSemester) {
+        messageSemester = currentUser.assignedSemester
+      }
+    }
 
     const newMsg = {
       author: authorName,
       content: safeContent,
       timestamp: new Date().toISOString(),
       likes: 0,
+      semester: messageSemester,
+      isTeacher: isTeacher, // Marcar si es mensaje de docente
     }
 
     try {
@@ -223,10 +280,14 @@ const ForumCrud = () => {
     inputRef.current?.focus()
   }
 
-  const getAvatarForUser = (authorName) => {
+  const getAvatarForUser = (authorName, isTeacher = false) => {
     if (!authorName) return { src: null, color: 'secondary', letter: '?', isPhoto: false }
     if (authorName === 'Admin' || authorName === 'Administración UNEFA') {
       return { src: null, color: 'danger', letter: 'A', isPhoto: false }
+    }
+    // Docentes tienen color verde especial
+    if (isTeacher) {
+      return { src: null, color: 'success', letter: 'D', isPhoto: false }
     }
     const userPhoto = usersMap[authorName]
     if (userPhoto) return { src: userPhoto, color: 'transparent', letter: '', isPhoto: true }
@@ -317,7 +378,9 @@ const ForumCrud = () => {
             <CIcon icon={cilPaperPlane} size="lg"/>
           </div>
           <div>
-            <h5 className="mb-0 fw-bold">Foro Estudiantil</h5>
+            <h5 className="mb-0 fw-bold">
+              Foro Estudiantil {userSemester ? `- Semestre ${userSemester}` : ''}
+            </h5>
             <small className="text-muted text-muted-dark">
               {loading ? 'Conectando...' : `${discussions.length} mensajes • En línea`}
             </small>
@@ -360,11 +423,27 @@ const ForumCrud = () => {
 
               const myUsername = currentUser ? currentUser.username : ''
               const msgAuthor = msg.author || 'Anónimo'
+              const msgIsTeacher = msg.isTeacher || false
               
-              const isMe = msgAuthor === myUsername || (msgAuthor === 'Admin' && myRole === 'admin')
-              const canDelete = isMe || myRole === 'admin'
-              const avatarData = getAvatarForUser(msgAuthor)
+              const isMe = msgAuthor === myUsername || (msgAuthor === 'Admin' && myRole === 'admin') || (msgIsTeacher && myRole === 'teacher' && currentUser?.name === msgAuthor)
+              const canDelete = isMe || myRole === 'admin' || myRole === 'teacher'
+              const avatarData = getAvatarForUser(msgAuthor, msgIsTeacher)
               const isDeletedMsg = msg.content && msg.content.includes("🚫 Mensaje eliminado")
+
+              // Determinar el color del nombre según el tipo de usuario
+              const getAuthorColor = () => {
+                if (isMe) return ''
+                if (msgAuthor === 'Admin') return '#ef4444' // Rojo para admin
+                if (msgIsTeacher) return '#10b981' // Verde para docente
+                return '#64748b' // Gris para estudiantes
+              }
+
+              // Mostrar etiqueta según rol
+              const getAuthorLabel = () => {
+                if (isMe) return 'Tú'
+                if (msgIsTeacher) return `${msgAuthor} (Docente)`
+                return msgAuthor
+              }
 
               return (
                 <div key={msg.id} className={`d-flex mb-3 ${isMe ? 'justify-content-end' : 'justify-content-start'} fade-in-up`}>
@@ -390,14 +469,14 @@ const ForumCrud = () => {
                       borderRadius: '18px',
                       borderTopLeftRadius: !isMe ? '2px' : '18px',
                       borderTopRightRadius: isMe ? '2px' : '18px',
-                      backgroundColor: isDeletedMsg ? '#f1f5f9' : (isMe ? '#3b82f6' : '#ffffff'),
+                      backgroundColor: isDeletedMsg ? '#f1f5f9' : (isMe ? '#3b82f6' : (msgIsTeacher ? '#ecfdf5' : '#ffffff')),
                       color: isDeletedMsg ? '#94a3b8' : (isMe ? '#ffffff' : '#1e293b'),
-                      border: isDeletedMsg ? '1px dashed #cbd5e1' : 'none'
+                      border: isDeletedMsg ? '1px dashed #cbd5e1' : (msgIsTeacher && !isMe ? '1px solid #10b981' : 'none')
                     }}
                   >
                     {!isDeletedMsg && (
-                        <div className={`fw-bold small mb-1 ${isMe ? 'text-end text-white-50' : ''}`} style={{ color: !isMe && msgAuthor === 'Admin' ? '#ef4444' : (!isMe ? '#64748b' : '') }}>
-                            {isMe ? 'Tú' : msgAuthor}
+                        <div className={`fw-bold small mb-1 ${isMe ? 'text-end text-white-50' : ''}`} style={{ color: getAuthorColor() }}>
+                            {getAuthorLabel()}
                         </div>
                     )}
 
@@ -485,13 +564,13 @@ const ForumCrud = () => {
       {/* MODAL (El modal suele adaptarse solo en CoreUI v5, pero por si acaso) */}
       <CModal visible={deleteModalVisible} onClose={() => setDeleteModalVisible(false)} alignment="center" transition={true}>
         <CModalHeader className="border-0 pb-0">
-             <CModalTitle className={deleteContext === 'admin' ? "text-danger fw-bold" : "fw-bold"}>
-                 {deleteContext === 'admin' ? 'Advertencia de Administrador' : 'Eliminar Mensaje'}
+             <CModalTitle className={(deleteContext === 'admin' || deleteContext === 'teacher') ? "text-danger fw-bold" : "fw-bold"}>
+                 {deleteContext === 'admin' ? 'Advertencia de Administrador' : (deleteContext === 'teacher' ? 'Advertencia de Docente' : 'Eliminar Mensaje')}
              </CModalTitle>
         </CModalHeader>
         <CModalBody className="text-center py-4">
-            <div className={`mb-3 ${deleteContext === 'admin' ? 'text-danger' : 'text-warning'}`}>
-                <CIcon icon={deleteContext === 'admin' ? cilWarning : cilTrash} size="4xl" />
+            <div className={`mb-3 ${(deleteContext === 'admin' || deleteContext === 'teacher') ? 'text-danger' : 'text-warning'}`}>
+                <CIcon icon={(deleteContext === 'admin' || deleteContext === 'teacher') ? cilWarning : cilTrash} size="4xl" />
             </div>
             {deleteContext === 'admin' ? (
                 <>
@@ -500,6 +579,15 @@ const ForumCrud = () => {
                         Esta acción ocultará el mensaje original y mostrará: <br/>
                         <em>"Eliminado por la administración"</em>. <br/>
                         <strong>Esto afectará a todos los usuarios.</strong>
+                    </p>
+                </>
+            ) : deleteContext === 'teacher' ? (
+                <>
+                    <h5 className="fw-bold">¿Eliminar mensaje de este estudiante?</h5>
+                    <p className="text-muted mb-0">
+                        Esta acción ocultará el mensaje original y mostrará: <br/>
+                        <em>"Eliminado por el docente"</em>. <br/>
+                        <strong>Esto afectará a todos los usuarios del semestre.</strong>
                     </p>
                 </>
             ) : (
@@ -514,11 +602,11 @@ const ForumCrud = () => {
                 Cancelar
             </CButton>
             <CButton 
-                color={deleteContext === 'admin' ? 'danger' : 'primary'} 
+                color={(deleteContext === 'admin' || deleteContext === 'teacher') ? 'danger' : 'primary'} 
                 className="px-4 text-white" 
                 onClick={confirmDelete}
             >
-                {deleteContext === 'admin' ? 'Confirmar Censura' : 'Aceptar'}
+                {deleteContext === 'admin' ? 'Confirmar Censura' : (deleteContext === 'teacher' ? 'Confirmar Eliminación' : 'Aceptar')}
             </CButton>
         </CModalFooter>
       </CModal>

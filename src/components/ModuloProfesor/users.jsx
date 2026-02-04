@@ -52,6 +52,24 @@ const Users = () => {
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
+
+  // Obtener rol y datos del usuario actual
+  const userRole = localStorage.getItem('userRole') || 'student'
+  const getCurrentUser = () => {
+    try {
+      const userData = localStorage.getItem('currentUser')
+      return userData ? JSON.parse(userData) : null
+    } catch {
+      return null
+    }
+  }
+  const currentUser = getCurrentUser()
+  
+  // Si es docente, obtener su semestre asignado
+  const isTeacher = userRole === 'teacher'
+  const teacherSemester = isTeacher && currentUser?.assignedSemester 
+    ? `${currentUser.assignedSemester}° Semestre` 
+    : null
   
   // Modales
   const [deleteModalVisible, setDeleteModalVisible] = useState(false)
@@ -71,7 +89,7 @@ const Users = () => {
     email: '',
     password: '', 
     carrera: '',
-    semestre: '',
+    semestre: teacherSemester || '', // Si es docente, fijar semestre automáticamente
     role: 'student', 
     puntuacion: 0,
     foto: null
@@ -121,8 +139,17 @@ const Users = () => {
     setSearchTerm(value)
   }
 
-  // 2. FILTRADO
+  // 2. FILTRADO - Excluir docentes y filtrar por semestre si es docente
   const filteredUsers = users.filter(user => {
+    // Excluir usuarios que son docentes (role='teacher') o admin
+    if (user.role === 'teacher' || user.role === 'admin') return false
+    
+    // Si el usuario actual es docente, solo mostrar estudiantes de su semestre
+    if (isTeacher && teacherSemester) {
+      if (user.semestre !== teacherSemester) return false
+    }
+    
+    // Filtrar por término de búsqueda
     const term = searchTerm.toLowerCase()
     return (
       (user.nombre && user.nombre.toLowerCase().includes(term)) ||
@@ -204,7 +231,9 @@ const Users = () => {
       setSuccessModalVisible(true)
 
       setNewUser({
-        nombre: '', apellido: '', cedula: '', username: '', email: '', password: '', carrera: '', semestre: '', role: 'student', puntuacion: 0, foto: null
+        nombre: '', apellido: '', cedula: '', username: '', email: '', password: '', carrera: '', 
+        semestre: teacherSemester || '', // Mantener semestre fijo para docentes
+        role: 'student', puntuacion: 0, foto: null
       })
       setErrors({})
 
@@ -216,7 +245,15 @@ const Users = () => {
   }
 
   // --- EDITAR Y ELIMINAR ---
-  const openEditModal = (user) => { setUserToEdit(user); setEditModalVisible(true) }
+  const openEditModal = (user) => { 
+    // Si es docente, forzar el semestre al que tiene asignado al editar
+    if (isTeacher && teacherSemester) {
+      setUserToEdit({ ...user, semestre: teacherSemester })
+    } else {
+      setUserToEdit(user)
+    }
+    setEditModalVisible(true) 
+  }
   const handleEditChange = (e) => { const { name, value } = e.target; setUserToEdit({ ...userToEdit, [name]: value }) }
   const saveEdit = async () => {
     try {
@@ -279,6 +316,20 @@ const Users = () => {
         [data-coreui-theme="dark"] .bg-box-adaptive { background-color: #2a303d !important; border-color: #4b5563 !important; }
         [data-coreui-theme="dark"] .modal-footer-adaptive { background-color: #1e293b !important; border-top-color: #4b5563 !important; }
         [data-coreui-theme="dark"] .shake-animation .form-control { background-color: #4a2323 !important; border-color: #e55353 !important; }
+
+        /* Input de semestre fijado - Adaptativo para ambos temas */
+        .semester-fixed-input {
+          background-color: #e9ecef !important;
+          color: #495057 !important;
+          cursor: not-allowed !important;
+          border: 1px solid #ced4da !important;
+          font-weight: 600 !important;
+        }
+        [data-coreui-theme="dark"] .semester-fixed-input {
+          background-color: #4b5563 !important;
+          color: #f3f4f6 !important;
+          border-color: #6b7280 !important;
+        }
       `}</style>
 
       <CRow>
@@ -418,13 +469,27 @@ const Users = () => {
             <h6 className="text-muted text-uppercase fw-bold mt-4 mb-3 small">Datos Académicos</h6>
             <CRow className="g-3">
                 <CCol md={6} className={errors.semestre && shake ? 'shake-animation' : ''}>
-                    <CFormLabel>Semestre *</CFormLabel>
+                    <CFormLabel>
+                      Semestre *
+                      {isTeacher && <CBadge color="info" className="ms-2">Fijado a tu semestre</CBadge>}
+                    </CFormLabel>
                     <CInputGroup>
                          <CInputGroupText><CIcon icon={cilBook} /></CInputGroupText>
-                         <CFormSelect name="semestre" value={newUser.semestre} onChange={handleAddChange} invalid={!!errors.semestre}>
-                            <option value="">Seleccionar...</option>
-                            {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (<option key={num} value={`${num}° Semestre`}>{num}° Semestre</option>))}
-                        </CFormSelect>
+                         {isTeacher && teacherSemester ? (
+                           // Si es docente, mostrar campo de solo lectura
+                           <CFormInput 
+                             value={teacherSemester} 
+                             readOnly 
+                             disabled
+                             className="semester-fixed-input"
+                           />
+                         ) : (
+                           // Si es admin, mostrar selector completo
+                           <CFormSelect name="semestre" value={newUser.semestre} onChange={handleAddChange} invalid={!!errors.semestre}>
+                               <option value="">Seleccionar...</option>
+                               {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (<option key={num} value={`${num}° Semestre`}>{num}° Semestre</option>))}
+                           </CFormSelect>
+                         )}
                     </CInputGroup>
                     {errors.semestre && <div className="error-msg"><CIcon icon={cilXCircle} size="sm" className="me-1"/>{errors.semestre}</div>}
                 </CCol>
@@ -503,12 +568,26 @@ const Users = () => {
                     </CFormSelect>
                 </CCol>
                 <CCol md={6}>
-                    <CFormLabel>Semestre</CFormLabel>
-                    <CFormSelect name="semestre" value={userToEdit.semestre} onChange={handleEditChange}>
-                        <option value="">Seleccionar...</option>
-                        {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (<option key={num} value={`${num}° Semestre`}>{num}° Semestre</option>))}
-                        <option value="Egresado">Egresado</option>
-                    </CFormSelect>
+                    <CFormLabel>
+                      Semestre
+                      {isTeacher && <CBadge color="info" className="ms-2">Fijado</CBadge>}
+                    </CFormLabel>
+                    {isTeacher && teacherSemester ? (
+                      // Si es docente, mostrar campo de solo lectura
+                      <CFormInput 
+                        value={teacherSemester} 
+                        readOnly 
+                        disabled
+                        className="semester-fixed-input"
+                      />
+                    ) : (
+                      // Si es admin, mostrar selector completo
+                      <CFormSelect name="semestre" value={userToEdit.semestre} onChange={handleEditChange}>
+                          <option value="">Seleccionar...</option>
+                          {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (<option key={num} value={`${num}° Semestre`}>{num}° Semestre</option>))}
+                          <option value="Egresado">Egresado</option>
+                      </CFormSelect>
+                    )}
                 </CCol>
             </CRow>
         </CModalBody>

@@ -12,7 +12,7 @@ import {
 } from '@coreui/icons'
 
 const Publications = () => {
-  const API_URL = 'http://localhost:3001/posts'
+  const API_URL = 'http://localhost:3001/publications'
   
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
@@ -32,8 +32,8 @@ const Publications = () => {
   const [currentPost, setCurrentPost] = useState({
     id: '', 
     title: '',      
-    body: '',       
-    date: '',       
+    content: '',       
+    createdAt: '',       
     mediaUrl: null  
   })
   const [postToDelete, setPostToDelete] = useState(null)
@@ -42,10 +42,24 @@ const Publications = () => {
   const [errors, setErrors] = useState({})
   const [shake, setShake] = useState(false)
 
-  // CARGAR DATOS
+  // CARGAR DATOS (filtrado por semestre del docente)
   const fetchPosts = async () => {
     try {
-      const response = await axios.get(API_URL)
+      // Obtener el semestre asignado al docente
+      let assignedSemester = null
+      const storedUser = localStorage.getItem('currentUser')
+      if (storedUser) {
+        const user = JSON.parse(storedUser)
+        assignedSemester = user.assignedSemester
+      }
+
+      // Filtrar por semestre del docente
+      let url = API_URL
+      if (assignedSemester) {
+        url += `?semester=${assignedSemester}`
+      }
+
+      const response = await axios.get(url)
       if (Array.isArray(response.data)) {
         setPosts(response.data.reverse())
       } else {
@@ -124,7 +138,7 @@ const Publications = () => {
     let newErrors = {}
     let isValid = true
     if (!currentPost.title.trim()) { newErrors.title = true; isValid = false }
-    if (!currentPost.body.trim()) { newErrors.body = true; isValid = false }
+    if (!currentPost.content.trim()) { newErrors.content = true; isValid = false }
     setErrors(newErrors)
     return isValid
   }
@@ -136,8 +150,22 @@ const Publications = () => {
         return
     }
 
-    const today = new Date().toLocaleDateString('es-VE')
-    const payload = { ...currentPost, date: isEditing ? currentPost.date : today }
+    // Obtener información del docente actual
+    let currentUserData = null
+    const storedUser = localStorage.getItem('currentUser')
+    if (storedUser) {
+      currentUserData = JSON.parse(storedUser)
+    }
+
+    const today = new Date().toISOString()
+    const payload = { 
+      ...currentPost, 
+      createdAt: isEditing ? currentPost.createdAt : today,
+      // Agregar campos del semestre y docente
+      semester: currentUserData?.assignedSemester || currentPost.semester,
+      teacherId: currentUserData?.id || currentPost.teacherId,
+      teacherName: currentUserData?.name || currentUserData?.username || currentPost.teacherName
+    }
 
     try {
         if (isEditing) {
@@ -179,7 +207,7 @@ const Publications = () => {
   }
 
   const resetForm = () => {
-    setCurrentPost({ id: '', title: '', body: '', date: '', mediaUrl: null })
+    setCurrentPost({ id: '', title: '', content: '', createdAt: '', mediaUrl: null })
     if (fileInputRef.current) fileInputRef.current.value = ""
   }
 
@@ -271,7 +299,7 @@ const Publications = () => {
                                                 </div>
                                                 <div>
                                                     <div className="fw-bold text-wrap" style={{maxWidth: '400px'}}>{item.title}</div>
-                                                    <div className="small text-muted text-truncate" style={{maxWidth: '350px'}}>{item.body}</div>
+                                                    <div className="small text-muted text-truncate" style={{maxWidth: '350px'}}>{item.content}</div>
                                                 </div>
                                             </div>
                                         </CTableDataCell>
@@ -280,7 +308,7 @@ const Publications = () => {
                                         <CTableDataCell className="text-center">
                                             <div className="small text-muted fw-semibold">
                                                 <CIcon icon={cilCalendar} size="sm" className="me-2 text-primary"/>
-                                                {item.date}
+                                                {item.createdAt ? new Date(item.createdAt).toLocaleDateString('es-VE') : 'Sin fecha'}
                                             </div>
                                         </CTableDataCell>
 
@@ -340,7 +368,7 @@ const Publications = () => {
             
             <div className="mb-4">
                 <CFormLabel className="fw-bold">Contenido *</CFormLabel>
-                <CFormTextarea name="body" rows={6} value={currentPost.body} onChange={handleInputChange} placeholder="Detalles de la noticia..." invalid={!!errors.body} className={errors.body && shake ? 'shake-animation' : ''}/>
+                <CFormTextarea name="content" rows={6} value={currentPost.content} onChange={handleInputChange} placeholder="Detalles de la noticia..." invalid={!!errors.content} className={errors.content && shake ? 'shake-animation' : ''}/>
             </div>
 
             <div className="bg-box-adaptive p-3 rounded d-flex align-items-center">
