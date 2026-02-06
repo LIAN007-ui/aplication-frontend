@@ -141,38 +141,47 @@ const Users = () => {
   const filteredUsers = users.filter(user => {
     if (user.role === 'teacher' || user.role === 'admin') return false
     
+    // Teacher Constraint
     if (isTeacher) {
+        let matches = false;
         const teacherId = currentUser?.assignedSemester || currentUser?.assigned_semester_id;
         
+        // Strict ID check
         if (teacherId && user.semestre_id) {
-            if (user.semestre_id == teacherId) return true;
+            if (user.semestre_id == teacherId) matches = true;
         }
 
-        if (!teacherSemester) return false; 
-
-        const normalize = (str) => String(str).toLowerCase().trim();
-        const mapToNum = (s) => {
-            if (!s) return 0;
-            const str = normalize(s);
-            if(str.includes('1') || str.includes('primer')) return 1;
-            if(str.includes('2') || str.includes('segundo')) return 2;
-            if(str.includes('3') || str.includes('tercer')) return 3;
-            if(str.includes('4') || str.includes('cuarto')) return 4;
-            if(str.includes('5') || str.includes('quinto')) return 5;
-            if(str.includes('6') || str.includes('sexto')) return 6;
-            if(str.includes('7') || str.includes('septimo') || str.includes('séptimo')) return 7;
-            if(str.includes('8') || str.includes('octavo')) return 8;
-            return 0; 
+        // Fallback string check
+        if (!matches && teacherSemester) { 
+            const normalize = (str) => String(str).toLowerCase().trim();
+            const mapToNum = (s) => {
+                if (!s) return 0;
+                const str = normalize(s);
+                if(str.includes('1') || str.includes('primer')) return 1;
+                if(str.includes('2') || str.includes('segundo')) return 2;
+                if(str.includes('3') || str.includes('tercer')) return 3;
+                if(str.includes('4') || str.includes('cuarto')) return 4;
+                if(str.includes('5') || str.includes('quinto')) return 5;
+                if(str.includes('6') || str.includes('sexto')) return 6;
+                if(str.includes('7') || str.includes('septimo') || str.includes('séptimo')) return 7;
+                if(str.includes('8') || str.includes('octavo')) return 8;
+                return 0; 
+            }
+            if (mapToNum(user.semestre) === mapToNum(teacherSemester)) matches = true;
         }
-
-        if (mapToNum(user.semestre) !== mapToNum(teacherSemester)) return false;
+        
+        // If teacher constraint is active but student doesn't match semester, hide them.
+        if (!matches) return false;
     }
 
+    // Career Filter
     if (selectedCareer && user.carrera !== selectedCareer) return false
     
+    // Text Search Filter
     const term = searchTerm.toLowerCase()
     return (
       (user.nombre && user.nombre.toLowerCase().includes(term)) ||
+      (user.apellido && user.apellido.toLowerCase().includes(term)) ||
       (user.username && user.username.toLowerCase().includes(term)) ||
       (user.cedula && user.cedula.toLowerCase().includes(term)) ||
       (user.email && user.email.toLowerCase().includes(term))

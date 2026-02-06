@@ -56,10 +56,17 @@ const UsersManagement = () => {
     }
   }
 
-  const filteredUsers = users.filter(u => 
-    u.name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    u.email?.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredUsers = users.filter(u => {
+    const term = searchTerm.toLowerCase()
+    return (
+        (u.name || '').toLowerCase().includes(term) || 
+        (u.username || '').toLowerCase().includes(term) || 
+        (u.email || '').toLowerCase().includes(term) ||
+        (u.first_name || '').toLowerCase().includes(term) ||
+        (u.last_name || '').toLowerCase().includes(term) ||
+        (u.full_name || '').toLowerCase().includes(term)
+    )
+  })
 
   return (
     <CRow>
