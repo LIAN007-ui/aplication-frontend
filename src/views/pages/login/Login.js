@@ -14,7 +14,7 @@ import {
 import PasswordRecovery from '../../pages/password-recovery/PasswordRecovery'
 import LoadingOverlay from '../../../components/LoadingOverlay/LoadingOverlay'
 import TeacherLoginModal from '../../../components/auth/TeacherLoginModal'
-
+import img from '../../../assets/images/unefa.jpg'
 const Login = () => {
   const navigate = useNavigate()
   const API_URL = 'http://localhost:5000/api/auth/login'
@@ -114,7 +114,7 @@ const Login = () => {
             overflow: hidden;
           }
           .background-landscape {
-            background-image: url('src/assets/images/unefa.jpg');
+            background-image: 'url(${img})';
             background-size: cover;
             background-position: center;
             position: absolute;
