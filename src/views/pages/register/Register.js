@@ -17,7 +17,7 @@ import LoadingOverlay from '../../../components/LoadingOverlay/LoadingOverlay'
 const Register = () => {
   const navigate = useNavigate()
   // CAMBIO: Apuntamos al backend real en el puerto 5000
-  const API_URL = 'https://aplication-backend-mkdg.onrender.com'
+  const API_URL = 'https://aplication-backend-mkdg.onrender.com/api/auth/register'
 
   const [nombre, setNombre] = useState('')
   const [apellido, setApellido] = useState('')
