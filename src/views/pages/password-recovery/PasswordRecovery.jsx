@@ -72,7 +72,7 @@ const PasswordRecovery = ({ visible, onClose }) => {
     }
 
     try {
-      const res = await axios.post(`${API_URL}/forgot-password`, {
+      const res = await axios.post(`${API_URL}/api/auth/forgot-password`, {
         email: email,
         security_answer: securityAnswer,
         type: userType
@@ -115,7 +115,7 @@ const PasswordRecovery = ({ visible, onClose }) => {
     setLoading(true)
 
     try {
-      const res = await axios.post(`${API_URL}/reset-password`, {
+      const res = await axios.post(`${API_URL}/api/auth/reset-password`, {
         token: resetToken,
         newPassword: newPassword
       })
