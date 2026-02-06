@@ -170,7 +170,7 @@ const Login = () => {
           <CRow className="align-items-center">
             <CCol md={7} className="text-white d-none d-md-block px-5">
               <h1 className="display-2 fw-bold" style={{ textShadow: '2px 2px 10px rgba(0,0,0,0.5)' }}>UNEFA</h1>
-              <p className="fs-5 opacity-90" style={{ textShadow: '1px 1px 4px black' }}>"Explora, participa y descubre lo nuevo en UNEFA."</p>
+              <p className="fs-5 opacity-90" style={{ textShadow: '1px 1px 4px black' }}>"Exlencia Educativa Abierta pueblo."</p>
             </CCol>
 
             <CCol md={5} lg={4}>
