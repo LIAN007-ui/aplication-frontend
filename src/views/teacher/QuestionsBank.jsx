@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import axios from 'axios'
+import api from '../../api'
 import {
   CCard, CCardBody, CCardHeader, CCol, CRow, CTable, CTableBody, CTableHead, CTableHeaderCell, CTableRow, CTableDataCell,
   CButton, CFormInput, CFormSelect, CInputGroup, CInputGroupText, CModal, CModalHeader, CModalBody, CModalFooter, CSpinner, CContainer, CFormLabel, CBadge,
@@ -15,71 +15,71 @@ import {
   cilCheckCircle, 
   cilSearch, 
   cilWarning, 
-  cilPuzzle, // Usaremos este como el "Avatar" de la pregunta
-  cilOptions,
+  cilPuzzle, 
   cilText
 } from '@coreui/icons'
 
 const Preguntas = () => {
-  const API_URL = 'http://localhost:3001/questions'
   
   const [questions, setQuestions] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   
-  // Obtener datos del docente actual
-  const getCurrentUser = () => {
-    try {
-      const userData = localStorage.getItem('currentUser')
-      return userData ? JSON.parse(userData) : null
-    } catch {
-      return null
-    }
-  }
-  const currentUser = getCurrentUser()
-  const teacherSemester = currentUser?.assignedSemester || null
+  const [teacherProfile, setTeacherProfile] = useState(null)
   
-  // PAGINACIÓN INTELIGENTE
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 5
 
-  // MODALES
   const [modalVisible, setModalVisible] = useState(false)
   const [deleteModalVisible, setDeleteModalVisible] = useState(false)
   const [successModalVisible, setSuccessModalVisible] = useState(false)
   
-  // LÓGICA DE DATOS
   const [isEditing, setIsEditing] = useState(false)
   const [currentQ, setCurrentQ] = useState({
     id: '', question: '', option1: '', option2: '', option3: '', option4: '', answer: '' 
   })
   const [qToDelete, setQToDelete] = useState(null)
   
-  // VALIDACIONES
   const [errors, setErrors] = useState({})
   const [shake, setShake] = useState(false)
 
-  // 1. CARGAR DATOS (solo preguntas del semestre del docente)
   const fetchQuestions = async () => {
     try {
-      const response = await axios.get(API_URL)
-      // Filtrar solo preguntas del semestre asignado al docente
-      const filteredQuestions = teacherSemester 
-        ? response.data.filter(q => q.semester === teacherSemester)
-        : response.data
-      setQuestions(filteredQuestions.reverse())
-    } catch (error) { console.error(error) } 
-    finally { setLoading(false) }
+      setLoading(true)
+      
+      const profileRes = await api.get('/users/profile')
+      const profile = profileRes.data
+      console.log("Perfil Docente Cargado:", profile)
+      setTeacherProfile(profile)
+      
+      const semesterId = profile.assigned_semester_id || profile.assignedSemester
+      console.log("ID Semestre detectado:", semesterId)
+
+      if (semesterId) {
+        const response = await api.get(`/questions/semester/${semesterId}`)
+        
+        const mappedQuestions = response.data.map(q => ({
+            id: q.id,
+            question: q.question_text, 
+            answer: q.correct_answer,
+            options: q.options || [], 
+        }))
+        
+        setQuestions(mappedQuestions.reverse())
+      }
+    } catch (error) { 
+        console.error(error) 
+    } finally { 
+        setLoading(false) 
+    }
   }
 
   useEffect(() => { fetchQuestions() }, [])
 
-  // 2. FILTRADO Y PAGINACIÓN
   const filteredQuestions = questions.filter(q => 
     q.question.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
-  // Resetear página si se busca
   useEffect(() => { setCurrentPage(1) }, [searchTerm])
 
   const indexOfLastItem = currentPage * itemsPerPage
@@ -91,34 +91,17 @@ const Preguntas = () => {
     if (page >= 1 && page <= totalPages) setCurrentPage(page)
   }
 
-  // --- LÓGICA PARA PAGINACIÓN DESLIZANTE (Ventana de 3 páginas) ---
-  const getPaginationGroup = () => {
-    let start = Math.floor((currentPage - 1) / 3) * 3;
-    return new Array(3).fill().map((_, idx) => start + idx + 1).filter(page => page <= totalPages);
-  };
-  
-  // Opción alternativa más fluida (estilo: [current-1, current, current+1])
   const getSmartPagination = () => {
       const maxButtons = 3;
-      // Calculamos el inicio para que la página actual esté en medio si es posible
       let startPage = Math.max(1, currentPage - 1);
       let endPage = Math.min(totalPages, startPage + maxButtons - 1);
-
-      // Ajuste si estamos cerca del final
-      if (endPage - startPage + 1 < maxButtons) {
-          startPage = Math.max(1, endPage - maxButtons + 1);
-      }
-
+      if (endPage - startPage + 1 < maxButtons) startPage = Math.max(1, endPage - maxButtons + 1);
       const pages = [];
-      for (let i = startPage; i <= endPage; i++) {
-          pages.push(i);
-      }
+      for (let i = startPage; i <= endPage; i++) pages.push(i);
       return pages;
   }
-
   const paginationGroup = getSmartPagination();
 
-  // 3. FORMULARIO
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setCurrentQ({ ...currentQ, [name]: value })
@@ -144,36 +127,41 @@ const Preguntas = () => {
         setTimeout(() => setShake(false), 500)
         return
     }
+    
     const payload = {
-        question: currentQ.question,
-        options: [currentQ.option1, currentQ.option2, currentQ.option3, currentQ.option4],
-        answer: currentQ.answer,
-        semester: teacherSemester, // Asignar al semestre del docente
-        teacherId: currentUser?.id || null
+        question_text: currentQ.question, 
+        options: [currentQ.option1, currentQ.option2, currentQ.option3, currentQ.option4], 
+        correct_answer: currentQ.answer,
+        semester_id: teacherProfile?.assigned_semester_id || teacherProfile?.assignedSemester 
     }
+
     try {
         if (isEditing) {
-            await axios.put(`${API_URL}/${currentQ.id}`, payload)
-            setQuestions(questions.map(q => (q.id === currentQ.id ? { ...payload, id: currentQ.id } : q)))
+            alert("La edición estará disponible en la próxima actualización del servidor.")
+            return;
         } else {
-            const res = await axios.post(API_URL, { ...payload, id: Date.now().toString() })
-            setQuestions([res.data, ...questions])
+            await api.post('/questions', payload)
         }
+        
         setModalVisible(false)
-        setSuccessModalVisible(true) // Mostrar animación de éxito
+        setSuccessModalVisible(true)
+        fetchQuestions() 
         
         setTimeout(() => {
             setSuccessModalVisible(false)
             resetForm()
         }, 2000)
 
-    } catch (error) { alert("Error al guardar") }
+    } catch (error) { 
+        console.error(error)
+        alert("Error al guardar") 
+    }
   }
 
   const handleDelete = async () => {
     if (qToDelete) {
         try {
-            await axios.delete(`${API_URL}/${qToDelete.id}`)
+            await api.delete(`/questions/${qToDelete.id}`)
             setQuestions(questions.filter(q => q.id !== qToDelete.id))
             setDeleteModalVisible(false)
         } catch (error) { alert("Error al eliminar") }
@@ -187,10 +175,10 @@ const Preguntas = () => {
         setCurrentQ({
             id: question.id,
             question: question.question,
-            option1: question.options[0],
-            option2: question.options[1],
-            option3: question.options[2],
-            option4: question.options[3],
+            option1: question.options[0] || '',
+            option2: question.options[1] || '',
+            option3: question.options[2] || '',
+            option4: question.options[3] || '',
             answer: question.answer
         })
     } else {
@@ -207,7 +195,6 @@ const Preguntas = () => {
   return (
     <CContainer fluid>
       <style>{`
-        /* --- ESTILOS COMPARTIDOS (Exactamente igual a Users.js) --- */
         .search-bar-custom .input-group-text { background-color: #fff; border: 1px solid #dee2e6; border-right: none; color: #768192; }
         .search-bar-custom .form-control { background-color: #fff; border: 1px solid #dee2e6; border-left: none; color: #768192; }
         
@@ -222,26 +209,20 @@ const Preguntas = () => {
         @keyframes popIn { 0% { transform: scale(0.5); opacity: 0; } 80% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); } }
         .success-icon-anim { animation: popIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) both; }
 
-        /* MODO OSCURO */
         [data-coreui-theme="dark"] .search-bar-custom .input-group-text { background-color: #2a303d; border-color: #3b4b60; color: #e5e7eb; }
         [data-coreui-theme="dark"] .search-bar-custom .form-control { background-color: #2a303d; border-color: #3b4b60; color: #fff; }
-        
-        /* Tabla Transparente en Dark Mode (Clave para que se vea igual) */
         [data-coreui-theme="dark"] .table { color: #e5e7eb; }
         [data-coreui-theme="dark"] .table thead th { background-color: transparent !important; color: #e5e7eb !important; border-bottom-color: #3b4b60; }
-        
         [data-coreui-theme="dark"] .modal-content { background-color: #1e293b; border: 1px solid #4b5563; color: #e5e7eb; }
         [data-coreui-theme="dark"] .modal-body .form-control, [data-coreui-theme="dark"] .modal-body .form-select, [data-coreui-theme="dark"] .modal-body .input-group-text { background-color: #374151; border-color: #4b5563; color: #fff; }
         [data-coreui-theme="dark"] .bg-box-adaptive { background-color: #2a303d !important; border-color: #4b5563 !important; }
         [data-coreui-theme="dark"] .modal-footer-adaptive { background-color: #1e293b !important; border-top-color: #4b5563 !important; }
         [data-coreui-theme="dark"] .shake-animation .form-control { background-color: #4a2323 !important; border-color: #e55353 !important; }
-        
-        /* Paginación Oscura */
         [data-coreui-theme="dark"] .page-link { background-color: #2a303d; border-color: #3b4b60; color: #fff; }
         [data-coreui-theme="dark"] .page-item.disabled .page-link { background-color: #1e293b; border-color: #3b4b60; color: #6b7280; }
         [data-coreui-theme="dark"] .page-item.active .page-link { background-color: #321fdb; border-color: #321fdb; }
       `}</style>
-
+      
       <CRow>
         <CCol xs={12}>
           <CCard className="mb-4 border-0 shadow-sm">
@@ -288,10 +269,8 @@ const Preguntas = () => {
                                 {currentItems.map(item => (
                                     <CTableRow key={item.id}>
                                         
-                                        {/* COLUMNA 1: Diseño IDÉNTICO a la columna de usuario */}
                                         <CTableDataCell className="ps-4 py-3">
                                             <div className="d-flex align-items-center">
-                                                {/* Usamos el CAvatar para que el espaciado sea igual */}
                                                 <CAvatar color="primary" textColor="white" size="md" className="me-3">
                                                     <CIcon icon={cilPuzzle} size="sm"/>
                                                 </CAvatar>
@@ -307,7 +286,6 @@ const Preguntas = () => {
                                             </div>
                                         </CTableDataCell>
 
-                                        {/* COLUMNA 2: Badge central */}
                                         <CTableDataCell className="text-center">
                                             <CBadge color="success" shape="rounded-pill" className="fw-bold px-3">
                                                 <CIcon icon={cilCheckCircle} className="me-1"/>
@@ -315,7 +293,6 @@ const Preguntas = () => {
                                             </CBadge>
                                         </CTableDataCell>
 
-                                        {/* COLUMNA 3: Botones Ghost */}
                                         <CTableDataCell className="text-end pe-4">
                                             <div className="d-flex gap-2 justify-content-end">
                                                 <CButton color="info" variant="ghost" size="sm" onClick={() => openModal(item)}>
@@ -339,39 +316,14 @@ const Preguntas = () => {
                         </CTable>
                     </div>
 
-                    {/* PAGINACIÓN INTELIGENTE (LIMITADA A 3 BOTONES) */}
                     {totalPages > 1 && (
                         <div className="d-flex justify-content-center py-4 border-top">
                             <CPagination aria-label="Navegación">
-                                {/* Botón Anterior */}
-                                <CPaginationItem 
-                                    disabled={currentPage === 1}
-                                    onClick={() => pageChange(currentPage - 1)}
-                                    style={{cursor: currentPage === 1 ? 'not-allowed' : 'pointer'}}
-                                >
-                                    <span>&laquo;</span>
-                                </CPaginationItem>
-                                
-                                {/* Números Dinámicos (Solo muestra 3) */}
+                                <CPaginationItem disabled={currentPage === 1} onClick={() => pageChange(currentPage - 1)} style={{cursor: currentPage === 1 ? 'not-allowed' : 'pointer'}}><span>&laquo;</span></CPaginationItem>
                                 {paginationGroup.map((item) => (
-                                    <CPaginationItem 
-                                        key={item} 
-                                        active={item === currentPage}
-                                        onClick={() => pageChange(item)}
-                                        style={{cursor: 'pointer'}}
-                                    >
-                                        {item}
-                                    </CPaginationItem>
+                                    <CPaginationItem key={item} active={item === currentPage} onClick={() => pageChange(item)} style={{cursor: 'pointer'}}>{item}</CPaginationItem>
                                 ))}
-
-                                {/* Botón Siguiente */}
-                                <CPaginationItem 
-                                    disabled={currentPage === totalPages}
-                                    onClick={() => pageChange(currentPage + 1)}
-                                    style={{cursor: currentPage === totalPages ? 'not-allowed' : 'pointer'}}
-                                >
-                                    <span>&raquo;</span>
-                                </CPaginationItem>
+                                <CPaginationItem disabled={currentPage === totalPages} onClick={() => pageChange(currentPage + 1)} style={{cursor: currentPage === totalPages ? 'not-allowed' : 'pointer'}}><span>&raquo;</span></CPaginationItem>
                             </CPagination>
                         </div>
                     )}
@@ -382,7 +334,6 @@ const Preguntas = () => {
         </CCol>
       </CRow>
 
-      {/* --- MODAL CREAR/EDITAR --- */}
       <CModal visible={modalVisible} onClose={() => setModalVisible(false)} size="lg" backdrop="static">
         <CModalHeader closeButton className="modal-header-custom">
             <strong><CIcon icon={isEditing ? cilPencil : cilPlus} className="me-2"/>{isEditing ? 'Editar Pregunta' : 'Nueva Pregunta'}</strong>
@@ -451,7 +402,6 @@ const Preguntas = () => {
         </CModalFooter>
       </CModal>
 
-      {/* --- MODAL ELIMINAR --- */}
       <CModal visible={deleteModalVisible} onClose={() => setDeleteModalVisible(false)} alignment="center" backdrop="static">
         <CModalHeader closeButton className="border-bottom-0"></CModalHeader>
         <CModalBody className="text-center p-4">
@@ -465,14 +415,13 @@ const Preguntas = () => {
         </CModalBody>
       </CModal>
 
-      {/* --- MODAL ÉXITO (ANIMACIÓN) --- */}
       <CModal visible={successModalVisible} alignment="center" className="border-0">
           <CModalBody className="text-center p-5">
             <div className="mb-4 success-icon-anim">
                 <CIcon icon={cilCheckCircle} size="5xl" className="text-success"/>
             </div>
             <h2 className="fw-bold text-success mb-2">¡Pregunta Guardada!</h2>
-            <p className="text-muted">La pregunta ha sido añadiada al banco de preguntas con éxito.</p>
+            <p className="text-muted">La pregunta ha sido añadida al banco de preguntas con éxito.</p>
           </CModalBody>
       </CModal>
     </CContainer>

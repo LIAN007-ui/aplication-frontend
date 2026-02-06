@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import axios from 'axios'
+import api from '../../api'
 import {
   CCard,
   CCardBody,
@@ -15,8 +15,6 @@ import {
   CTableHeaderCell,
   CTableRow,
   CBadge,
-  CProgress,
-  CProgressBar,
   CAvatar
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
@@ -29,7 +27,6 @@ import {
 } from '@coreui/icons'
 
 const AdminDashboard = () => {
-  const API_URL = 'http://localhost:3001'
 
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({
@@ -46,13 +43,12 @@ const AdminDashboard = () => {
 
   const fetchData = async () => {
     try {
-      const response = await axios.get(`${API_URL}/users`)
+      const response = await api.get('/users/all')
       const users = response.data
 
       const students = users.filter((u) => u.role === 'student')
       const teachersList = users.filter((u) => u.role === 'teacher')
 
-      // Estadísticas básicas
       const totalStudents = students.length
       const totalTeachers = teachersList.length
 
@@ -62,14 +58,10 @@ const AdminDashboard = () => {
       })
       const avgScore = totalStudents > 0 ? (sumScores / totalStudents).toFixed(1) : 0
 
-      // Estudiantes por semestre (1-8)
       const bySemester = []
       
-      // Encontrar el máximo número de estudiantes en un solo semestre para escalar la barra al 100%
       for (let i = 1; i <= 8; i++) {
-        const count = students.filter(s => s.semestre === `${i}° Semestre`).length
-        // Porcentaje real respecto al TOTAL de estudiantes (0-100%)
-        // Si hay 100 estudiantes y 20 están en el sem 1, la barra será del 20%.
+        const count = students.filter(s => s.semestre_id === i).length
         
         const percentageValue = totalStudents > 0 ? ((count / totalStudents) * 100) : 0
         const realPercentage = percentageValue.toFixed(0)
@@ -77,7 +69,7 @@ const AdminDashboard = () => {
         bySemester.push({
           semester: i,
           count,
-          barPercentage: percentageValue, // Usar el porcentaje real para el ancho de la barra
+          barPercentage: percentageValue,
           realPercentage
         })
       }
@@ -111,48 +103,61 @@ const AdminDashboard = () => {
       <style>{`
         .dashboard-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
         .dashboard-card:hover { transform: translateY(-4px); box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important; }
-        .semester-bar { transition: width 0.5s ease; }
+        
         [data-coreui-theme="dark"] .table { color: #e5e7eb; }
-        [data-coreui-theme="dark"] .table thead th { background-color: transparent !important; color: #e5e7eb !important; }
-        [data-coreui-theme="dark"] .text-muted { color: #9ca3af !important; }
+        
+        @keyframes slide-in {
+          0% { width: 0; opacity: 0; }
+          100% { opacity: 1; }
+        }
 
-        /* Animaciones avanzadas para barras */
-        @keyframes flow {
-          0%, 100% { background-position: 0% 50%; }
-          50% { background-position: 100% 50%; }
+        @keyframes gloss-flow {
+          0% { transform: translateX(-100%) skewX(-15deg); }
+          100% { transform: translateX(200%) skewX(-15deg); }
         }
-        @keyframes wave {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-        @keyframes ripple {
-          0% { transform: scale(1) translateX(-100%); opacity: 0.6; }
-          50% { opacity: 0.3; }
-          100% { transform: scale(1) translateX(100%); opacity: 0.6; }
-        }
-        @keyframes growBar {
-          from { width: 0%; }
-        }
-        .animated-bar {
+
+        .liquid-bar {
+          height: 100%;
+          border-radius: 12px;
           position: relative;
           overflow: hidden;
-          background-size: 200% 200%;
-          animation: growBar 1s ease-out forwards, flow 3s ease infinite;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+          transition: width 1.2s cubic-bezier(0.34, 1.56, 0.64, 1); 
+          animation: slide-in 1s ease-out forwards;
         }
-        .animated-bar::before {
-          content: '';
+
+        .liquid-bar::after {
+          content: "";
           position: absolute;
-          top: 0; left: 0; right: 0; bottom: 0;
-          background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.4) 50%, transparent 100%);
-          animation: wave 2s linear infinite;
+          top: 0;
+          left: 0;
+          width: 50%;
+          height: 100%;
+          background: linear-gradient(
+            to right,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.3) 50%,
+            rgba(255, 255, 255, 0) 100%
+          );
+          transform: translateX(-100%) skewX(-15deg);
+          animation: gloss-flow 3s infinite ease-in-out;
         }
-        .animated-bar::after {
-          content: '';
-          position: absolute;
-          top: -50%; left: -50%; right: -50%; bottom: -50%;
-          background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.3) 0%, transparent 70%);
-          animation: ripple 3s ease-in-out infinite;
-        }
+        
+        .liquid-bar::before { content: none; }
+
+        .bg-gradient-primary { background: linear-gradient(90deg, #321fdb 0%, #5647e3 100%); }
+        .bg-gradient-success { background: linear-gradient(90deg, #2eb85c 0%, #51cb79 100%); }
+        .bg-gradient-info { background: linear-gradient(90deg, #39f 0%, #68b4ff 100%); }
+        .bg-gradient-warning { background: linear-gradient(90deg, #f9b115 0%, #fccc57 100%); }
+        
+        .color-sem-1 { background: linear-gradient(90deg, #6366f1, #818cf8); } 
+        .color-sem-2 { background: linear-gradient(90deg, #3b82f6, #60a5fa); } 
+        .color-sem-3 { background: linear-gradient(90deg, #10b981, #34d399); } 
+        .color-sem-4 { background: linear-gradient(90deg, #f59e0b, #fbbf24); } 
+        .color-sem-5 { background: linear-gradient(90deg, #f97316, #fb923c); } 
+        .color-sem-6 { background: linear-gradient(90deg, #ef4444, #f87171); } 
+        .color-sem-7 { background: linear-gradient(90deg, #ec4899, #f472b6); } 
+        .color-sem-8 { background: linear-gradient(90deg, #8b5cf6, #a78bfa); } 
       `}</style>
 
       <h2 className="mb-4 d-flex align-items-center gap-2">
@@ -160,7 +165,6 @@ const AdminDashboard = () => {
         Panel de Administración Global
       </h2>
 
-      {/* Stats Widgets */}
       <CRow className="mb-4">
         <CCol sm={6} lg={3}>
           <CWidgetStatsF
@@ -201,7 +205,6 @@ const AdminDashboard = () => {
       </CRow>
 
       <CRow>
-        {/* Distribución por Semestre */}
         <CCol lg={8}>
           <CCard className="mb-4 shadow-sm dashboard-card">
             <CCardHeader className="bg-transparent border-0">
@@ -221,17 +224,16 @@ const AdminDashboard = () => {
                     style={{ 
                       height: '24px', 
                       borderRadius: '12px', 
-                      backgroundColor: 'rgba(128, 128, 128, 0.1)',
-                      overflow: 'hidden'
+                      backgroundColor: 'rgba(200, 200, 200, 0.2)',
+                      overflow: 'hidden',
+                      boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.1)'
                     }}
                   >
                     <div 
-                      className={`animated-bar bg-${getSemesterColor(item.semester)}`}
+                      className={`liquid-bar color-sem-${item.semester}`}
                       style={{ 
-                        height: '100%', 
                         width: `${item.barPercentage}%`,
-                        minWidth: item.count > 0 ? '5%' : '0%',
-                        borderRadius: '12px',
+                        minWidth: item.count > 0 ? '8%' : '0%',
                       }}
                     />
                   </div>
@@ -241,7 +243,6 @@ const AdminDashboard = () => {
           </CCard>
         </CCol>
 
-        {/* Docentes Registrados */}
         <CCol lg={4}>
           <CCard className="mb-4 shadow-sm dashboard-card h-100">
             <CCardHeader className="bg-transparent border-0">
@@ -270,8 +271,8 @@ const AdminDashboard = () => {
                         </div>
                       </CTableDataCell>
                       <CTableDataCell className="text-center">
-                        <CBadge color={getSemesterColor(teacher.assignedSemester)} shape="rounded-pill">
-                          {teacher.assignedSemester}°
+                        <CBadge color={getSemesterColor(teacher.assignedSemester || 1)} shape="rounded-pill">
+                          {teacher.assignedSemester ? `${teacher.assignedSemester}°` : 'N/A'}
                         </CBadge>
                       </CTableDataCell>
                     </CTableRow>
@@ -289,8 +290,6 @@ const AdminDashboard = () => {
           </CCard>
         </CCol>
       </CRow>
-
-
     </>
   )
 }

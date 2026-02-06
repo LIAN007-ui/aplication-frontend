@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react'
-import axios from 'axios'
+import api from '../../api'
 import {
   CContainer,
   CRow,
@@ -39,46 +39,58 @@ const ModuloUsuarios = () => {
   const [loading, setLoading] = useState(true)
   const [modalVisible, setModalVisible] = useState(false)
   const [archivoSeleccionado, setArchivoSeleccionado] = useState(null)
-  const [zoom, setZoom] = useState(100) // porcentaje o 'page-width'
+  const [zoom, setZoom] = useState(100) 
   const viewerRef = useRef(null)
   
-  // Estados para Búsqueda y Paginación
   const [paginaActual, setPaginaActual] = useState(1)
   const [busqueda, setBusqueda] = useState('')
   const [fechaFiltro, setFechaFiltro] = useState('')
 
-  // --- CONEXIÓN DE DATOS ---
   const fetchPublicaciones = async () => {
     try {
-      // Obtener el semestre del estudiante actual
       let userSemester = null
-      const storedUser = localStorage.getItem('currentUser')
-      if (storedUser) {
-        const user = JSON.parse(storedUser)
-        // Extraer el número del semestre del formato "X° Semestre"
-        if (user.semestre) {
-          const match = user.semestre.match(/(\d+)/)
-          userSemester = match ? match[1] : null
+      try {
+        const profileRes = await api.get('/users/profile')
+        if (profileRes.data && profileRes.data.current_semester_id) {
+            userSemester = profileRes.data.current_semester_id
         }
+      } catch (err) {
+        console.error("Error obteniendo perfil:", err)
       }
 
-      // Cargar publicaciones del endpoint correcto
-      let url = 'http://localhost:3001/publications'
+      let response;
       if (userSemester) {
-        url += `?semester=${userSemester}`
+          response = await api.get(`/publications/semester/${userSemester}`)
+      } else {
+          setPublicaciones([])
+          return
       }
       
-      const response = await axios.get(url)
-      
       const dataFormateada = response.data.map(post => {
+        const fileUrl = post.file_attachment_url || post.mediaUrl; 
+        let tipo = 'texto';
+
+        if (fileUrl) {
+            const lowerUrl = fileUrl.toLowerCase();
+            if (lowerUrl.match(/\.(jpeg|jpg|png|gif|webp)$/)) {
+                tipo = 'imagen';
+            } else if (lowerUrl.includes('.pdf')) {
+                tipo = 'pdf';
+            } else if (lowerUrl.match(/\.(doc|docx)$/)) {
+                tipo = 'word';
+            } else {
+                tipo = 'pdf'; 
+            }
+        }
+
         return {
             id: post.id,
             titulo: post.title,
             descripcion: post.content,
-            url: post.mediaUrl || null,
-            tipo: post.mediaUrl ? 'pdf' : 'texto',
-            fecha: post.createdAt ? new Date(post.createdAt).toLocaleDateString('es-VE') : '',
-            autor: post.teacherName || 'Docente'
+            url: fileUrl,
+            tipo: tipo,
+            fecha: post.created_at ? new Date(post.created_at).toLocaleDateString('es-VE') : '',
+            autor: post.teacher_name || post.author_name || 'Docente'
         }
       })
       setPublicaciones(dataFormateada.reverse())
@@ -94,7 +106,6 @@ const ModuloUsuarios = () => {
     fetchPublicaciones()
   }, [])
 
-  // --- LÓGICA DE FILTRADO ---
   const publicacionesFiltradas = useMemo(() => {
     return publicaciones.filter(item => {
       const textoCoincide = item.titulo.toLowerCase().includes(busqueda.toLowerCase())
@@ -116,7 +127,6 @@ const ModuloUsuarios = () => {
     })
   }, [publicaciones, busqueda, fechaFiltro])
 
-  // --- PAGINACIÓN ---
   const indiceUltimoItem = paginaActual * ITEMS_POR_PAGINA
   const indicePrimerItem = indiceUltimoItem - ITEMS_POR_PAGINA
   const resultadosVisibles = publicacionesFiltradas.slice(indicePrimerItem, indiceUltimoItem)
@@ -139,17 +149,9 @@ const ModuloUsuarios = () => {
     setFechaFiltro('')
   }
 
-  // --- FUNCIONES VISUALES ---
   const manejarApertura = (publicacion) => {
-    if (publicacion.tipo === 'word') {
-      const link = document.createElement('a')
-      link.href = publicacion.url
-      link.download = publicacion.titulo || 'archivo'
-      link.click()
-    } else {
       setArchivoSeleccionado(publicacion)
       setModalVisible(true)
-    }
   }
 
   const handleDownload = () => {
@@ -205,16 +207,29 @@ const ModuloUsuarios = () => {
                 <CButton size="sm" color="light" onClick={resetZoom}>100%</CButton>
                 <CButton size="sm" color="light" onClick={enterFullscreen}><CIcon icon={cilFullscreen} /></CButton>
               </div>
-              <div ref={viewerRef} className="ratio ratio-4x3" style={{ minHeight: '70vh' }}>
-                <iframe src={iframeSrc} title="Visor PDF" className="rounded border" style={{ width: '100%', height: '100%' }} />
+              <div ref={viewerRef} className="ratio ratio-4x3 bg-white rounded border" style={{ minHeight: '70vh' }}>
+                <iframe src={iframeSrc} title="Visor PDF" className="w-100 h-100" />
               </div>
             </div>
           )
         }
+      case 'word':
+        return (
+            <div className="text-center py-5">
+                <div className="mb-4">
+                    <span style={{fontSize: '4rem'}}>📝</span>
+                </div>
+                <h4 className="fw-bold">Documento de Word</h4>
+                <p className="text-muted mb-4">Este archivo requiere Microsoft Word para visualizarse.</p>
+                <CButton color="primary" size="lg" shape="rounded-pill" onClick={handleDownload} className="px-5 shadow-sm">
+                    <CIcon icon={cilCloudDownload} className="me-2"/> Descargar
+                </CButton>
+            </div>
+        )
       case 'texto':
         return (
           <div className="p-4">
-            <div className="bg-white rounded-4 p-4 shadow-sm">
+            <div className="bg-adaptive rounded-4 p-4 shadow-sm">
               <p className="fs-5 mb-0" style={{ whiteSpace: 'pre-wrap' }}>
                 {archivoSeleccionado.descripcion}
               </p>
@@ -252,9 +267,7 @@ const ModuloUsuarios = () => {
 
   return (
     <CContainer fluid className="p-4">
-      {/* ESTILOS CSS CON CORRECCIONES DARK MODE */}
       <style>{`
-        /* Animaciones Generales */
         @keyframes fade-in-up {
           0% { opacity: 0; transform: translateY(20px); }
           100% { opacity: 1; transform: translateY(0); }
@@ -263,7 +276,6 @@ const ModuloUsuarios = () => {
           animation: fade-in-up 0.5s ease-out forwards;
         }
         
-        /* Tarjetas Flotantes */
         .tarjeta-interactiva {
           transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
           border: 2px solid transparent !important;
@@ -275,7 +287,6 @@ const ModuloUsuarios = () => {
           cursor: pointer;
         }
 
-        /* Título con Degradado */
         .titulo-amigable {
           background: linear-gradient(90deg, #2563eb 0%, #0891b2 100%);
           -webkit-background-clip: text;
@@ -283,7 +294,6 @@ const ModuloUsuarios = () => {
           background-clip: text;
         }
 
-        /* --- ESTILOS INPUTS BASE --- */
         .grupo-busqueda-moderno {
           border: 1px solid #e2e8f0;
           border-radius: 50px; 
@@ -310,32 +320,65 @@ const ModuloUsuarios = () => {
           color: #94a3b8;
         }
 
-        /* --- CORRECCIONES PARA MODO OSCURO --- */
+        [data-coreui-theme="dark"] .titulo-amigable {
+           background: linear-gradient(90deg, #60a5fa 0%, #22d3ee 100%);
+           -webkit-background-clip: text;
+           background-clip: text;
+        }
+
         [data-coreui-theme="dark"] .grupo-busqueda-moderno {
-          background-color: #1e293b !important; /* Gris oscuro azulado */
+          background-color: #1e293b !important; 
           border-color: #334155 !important;
         }
         
         [data-coreui-theme="dark"] .input-sin-borde {
-          color: #f8fafc !important; /* Texto blanco */
-          color-scheme: dark; /* Para que el calendario nativo sea oscuro */
+          color: #f8fafc !important; 
+          color-scheme: dark; 
         }
         
         [data-coreui-theme="dark"] .input-sin-borde::placeholder {
-          color: #94a3b8 !important; /* Placeholder gris claro */
+          color: #94a3b8 !important; 
         }
         
         [data-coreui-theme="dark"] .icono-input {
-          color: #cbd5e1 !important; /* Icono gris claro */
+          color: #cbd5e1 !important; 
         }
         
-        /* Ajuste de tarjetas en modo oscuro si es necesario */
         [data-coreui-theme="dark"] .tarjeta-interactiva {
            background-color: #1e293b !important;
            border-color: #334155;
         }
 
-        /* Animación Botón Limpiar (X) */
+        .bg-adaptive { 
+            background-color: #ffffff; 
+            color: #212529; 
+            border: 1px solid #f1f5f9;
+        }
+        
+        [data-coreui-theme="dark"] .bg-adaptive { 
+            background-color: #2a303d !important; 
+            border-color: #4b5563 !important; 
+            color: #e5e7eb !important; 
+        }
+
+        [data-coreui-theme="dark"] .modal-content {
+            background-color: #1e293b !important;
+            border: 1px solid #334155;
+        }
+        [data-coreui-theme="dark"] .modal-header, 
+        [data-coreui-theme="dark"] .modal-footer {
+            border-color: #334155 !important;
+        }
+        [data-coreui-theme="dark"] .modal-title {
+            color: #f8fafc !important;
+        }
+        [data-coreui-theme="dark"] .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
+        [data-coreui-theme="dark"] .text-dark { 
+            color: #fff !important; 
+        }
+
         .boton-limpiar {
           transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
           border: none !important;
@@ -347,7 +390,6 @@ const ModuloUsuarios = () => {
         }
       `}</style>
 
-      {/* CABECERA Y BUSCADOR MEJORADO */}
       <div className="mb-5">
         <CRow className="align-items-end justify-content-between g-3">
             <CCol md={5}>
@@ -361,7 +403,6 @@ const ModuloUsuarios = () => {
             
             <CCol md={7}>
                 <CRow className="g-3 justify-content-end">
-                    {/* BUSCADOR DE TEXTO */}
                     <CCol xs={12} sm={6} lg={6}>
                         <CInputGroup className="grupo-busqueda-moderno shadow-sm">
                             <CInputGroupText className="icono-input ps-3">
@@ -385,7 +426,6 @@ const ModuloUsuarios = () => {
                         </CInputGroup>
                     </CCol>
                     
-                    {/* FILTRO DE FECHA */}
                     <CCol xs={12} sm={5} lg={5}>
                         <CInputGroup className="grupo-busqueda-moderno shadow-sm">
                              <CInputGroupText className="icono-input ps-3">
@@ -394,7 +434,7 @@ const ModuloUsuarios = () => {
                             <CFormInput 
                                 type="date" 
                                 className="input-sin-borde pe-3"
-                                style={{ color: '#475569' }} // Color por defecto (claro)
+                                style={{ color: '#475569' }} 
                                 value={fechaFiltro}
                                 onChange={(e) => setFechaFiltro(e.target.value)}
                             />
@@ -405,7 +445,6 @@ const ModuloUsuarios = () => {
         </CRow>
       </div>
 
-      {/* CONTENIDO PRINCIPAL */}
       {loading ? (
         <div className="text-center py-5">
           <CSpinner color="primary" />
@@ -489,7 +528,6 @@ const ModuloUsuarios = () => {
                 </CRow>
             </div>
 
-            {/* PAGINACIÓN */}
             {totalPaginas > 1 && (
                 <div className="d-flex justify-content-center align-items-center mt-5 gap-3">
                     <CButton 
@@ -531,7 +569,6 @@ const ModuloUsuarios = () => {
         </>
       )}
 
-      {/* MODAL */}
       <CModal 
         visible={modalVisible} 
         onClose={() => setModalVisible(false)}
@@ -545,14 +582,14 @@ const ModuloUsuarios = () => {
             {archivoSeleccionado?.titulo}
           </CModalTitle>
         </CModalHeader>
-        <CModalBody className="p-4 bg-light">
+        <CModalBody className="p-4">
           {renderizarContenidoModal()}
         </CModalBody>
         <CModalFooter className="border-0 pt-0">
           <CButton color="secondary" onClick={() => setModalVisible(false)}>
             Cerrar
           </CButton>
-          <CButton color="primary" onClick={handleDownload}>
+          <CButton color="primary" onClick={handleDownload} className="fw-bold text-white">
             <CIcon icon={cilCloudDownload} /> Descargar Copia
           </CButton>
         </CModalFooter>

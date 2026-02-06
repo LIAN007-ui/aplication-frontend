@@ -17,7 +17,7 @@ import TeacherLoginModal from '../../../components/auth/TeacherLoginModal'
 
 const Login = () => {
   const navigate = useNavigate()
-  const API_URL = 'http://localhost:3001/users'
+  const API_URL = 'http://localhost:5000/api/auth/login'
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -38,55 +38,41 @@ const Login = () => {
     }
 
     try {
-      // 1. SEGURIDAD: Buscamos solo por usuario para evitar falsos positivos
-      const response = await axios.get(`${API_URL}?username=${username}`)
-      console.log('Respuesta del servidor:', response.data)
-      // Asegurar que usersFound sea siempre un array
-      const usersFound = Array.isArray(response.data) ? response.data : [response.data].filter(Boolean)
-      console.log('Usuarios encontrados:', usersFound)
-      console.log('Contraseña ingresada:', password)
+      const response = await axios.post(API_URL, {
+        identifier: username,
+        password: password
+      })
 
-      // 2. VERIFICACIÓN ESTRICTA
-      // Buscamos si alguno de los usuarios encontrados tiene la contraseña EXACTA
-      const validUser = usersFound.find(user => user && user.password === password)
-      console.log('Usuario válido:', validUser)
+      const { token, user } = response.data
+      console.log('Login exitoso:', user)
 
-      if (validUser) {
-        // Guardar sesión y datos COMPLETOS para el perfil
-        localStorage.setItem('isAuthenticated', 'true')
-        localStorage.setItem('userRole', validUser.role || 'student') 
-        localStorage.setItem('currentUser', JSON.stringify(validUser)) // Guardamos todo el objeto (foto, cedula, etc)
-        
-        setIsNavigating(true)
-        
-        // Redirección según rol
-        let targetDashboard = '/perfil' // Por defecto estudiante
-        if (validUser.role === 'admin') {
-          targetDashboard = '/admin/dashboard'
-        } else if (validUser.role === 'teacher') {
-          targetDashboard = '/dashboard'
-        }
-        
-        setTimeout(() => {
-            navigate(targetDashboard)
-        }, 1000) 
+      localStorage.setItem('isAuthenticated', 'true')
+      localStorage.setItem('token', token)
+      localStorage.setItem('userRole', user.role)
+      localStorage.setItem('currentUser', JSON.stringify(user))
 
-      } else {
-        // Si no se encuentra el usuario O la contraseña no coincide
-        triggerError('Usuario o contraseña incorrectos')
-      }
+      setIsNavigating(true)
+
+      let targetDashboard = '/dashboard'
+      if (user.role === 'admin') targetDashboard = '/admin/dashboard'
+      else if (user.role === 'teacher') targetDashboard = '/dashboard'
+      else if (user.role === 'student') targetDashboard = '/perfil'
+
+      setTimeout(() => {
+        navigate(targetDashboard)
+      }, 1000)
+
     } catch (err) {
       console.error(err)
-      triggerError('Error de conexión con el servidor')
+      const msg = err.response?.data?.error || 'Usuario o contraseña incorrectos'
+      triggerError(msg)
     }
   }
 
   const handleAdminSuccess = () => {
     localStorage.setItem('isAuthenticated', 'true')
     localStorage.setItem('userRole', 'admin')
-    // Guardar un usuario admin genérico en localStorage para evitar errores en perfil
     localStorage.setItem('currentUser', JSON.stringify({ username: 'Administrador', role: 'admin' }))
-    
     setShowAdminModal(false)
     setIsNavigating(true)
     setTimeout(() => navigate('/admin/dashboard'), 1000)
@@ -117,7 +103,6 @@ const Login = () => {
             70% { box-shadow: 0 0 0 10px rgba(255, 165, 0, 0); border: 2px solid #ffa500; }
             100% { box-shadow: 0 0 0 0 rgba(255, 165, 0, 0); border: 2px solid #ffa500; }
           }
-
           .main-wrapper {
             background: linear-gradient(-45deg, #0011fbff, #2b87f4, #a19cb4ff, #87cefa);
             background-size: 400% 400%;
@@ -128,7 +113,6 @@ const Login = () => {
             position: relative;
             overflow: hidden;
           }
-
           .background-landscape {
             background-image: url('src/assets/images/unefa.jpg');
             background-size: cover;
@@ -138,7 +122,6 @@ const Login = () => {
             opacity: 0.35;
             z-index: 1;
           }
-
           .glass-panel {
             background: rgba(255, 255, 255, 0.2) !important;
             backdrop-filter: blur(15px);
@@ -146,11 +129,7 @@ const Login = () => {
             border-radius: 25px !important;
             z-index: 2;
           }
-
-          .shake-animation {
-            animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
-          }
-
+          .shake-animation { animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both; }
           .custom-input {
             border: 2px solid transparent !important;
             border-radius: 8px !important;
@@ -159,11 +138,7 @@ const Login = () => {
             font-weight: 600;
             transition: all 0.3s ease;
           }
-
-          .input-empty {
-            animation: pulseWarning 1.5s infinite !important;
-          }
-
+          .input-empty { animation: pulseWarning 1.5s infinite !important; }
           .label-resaltado {
             color: white;
             font-weight: 700;
@@ -171,26 +146,13 @@ const Login = () => {
             margin-bottom: 5px;
             display: block;
           }
-
           .pass-toggle {
-            position: absolute;
-            right: 12px;
-            bottom: 10px;
-            cursor: pointer;
-            color: #003366;
-            font-size: 0.7rem;
-            font-weight: 800;
-            z-index: 10;
-            background: rgba(255, 255, 255, 0.7);
-            padding: 2px 6px;
-            border-radius: 4px;
+            position: absolute; right: 12px; bottom: 10px; cursor: pointer;
+            color: #003366; font-size: 0.7rem; font-weight: 800; z-index: 10;
+            background: rgba(255, 255, 255, 0.7); padding: 2px 6px; border-radius: 4px;
             user-select: none;
           }
-          .pass-toggle:hover {
-            background: #ffffff;
-            color: #2b87f4;
-          }
-
+          .pass-toggle:hover { background: #ffffff; color: #2b87f4; }
           .admin-modal .modal-content {
             background: rgba(255, 255, 255, 0.2) !important;
             backdrop-filter: blur(15px);
@@ -218,10 +180,10 @@ const Login = () => {
                     <h2 className="text-white fw-bold mb-4 text-center" style={{ textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }}>Entrar</h2>
 
                     <div className="mb-3">
-                      <label className="label-resaltado">Usuario</label>
+                      <label className="label-resaltado">Usuario o Correo</label>
                       <CFormInput
                         className={`custom-input py-2 ${error && !username ? 'input-empty' : ''}`}
-                        placeholder="Ingresa tu usuario"
+                        placeholder="Ingresa tu usuario o correo"
                         value={username}
                         onChange={(e) => setUsername(e.target.value)}
                       />

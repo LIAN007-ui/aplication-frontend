@@ -34,7 +34,20 @@ const AppContent = () => {
               )
             )
           })}
-          <Route path="/" element={<Navigate to="/login" replace />} />
+          <Route
+            path="/"
+            element={
+              <Navigate
+                to={
+                  userRole === 'admin' ? '/admin/dashboard' :
+                    userRole === 'teacher' ? '/dashboard' :
+                      userRole === 'student' ? '/perfil' :
+                        '/login'
+                }
+                replace
+              />
+            }
+          />
         </Routes>
       </Suspense>
     </CContainer>

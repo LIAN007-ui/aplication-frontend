@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import axios from 'axios'
+import api from '../../api' 
 import {
   CContainer,
   CCard,
@@ -30,7 +30,6 @@ import {
 } from '@coreui/icons'
 
 const PerfilEstudiantil = () => {
-  const API_URL = 'http://localhost:3001/users'
   const fileInputRef = useRef(null)
   
   const [loading, setLoading] = useState(true)
@@ -44,53 +43,46 @@ const PerfilEstudiantil = () => {
     username: '',
     email: '',
     carrera: 'Ingeniería de Sistemas',
-    semestre: 'Estudiante Activo',
+    semestre: 'Cargando...', 
     cedula: 'No registrada',
     foto: null,
     puntuacion: 0 
   })
 
-  // CARGAR DATOS
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const storedUserStr = localStorage.getItem('currentUser')
-        
-        if (storedUserStr && storedUserStr !== "undefined") {
-          const storedUser = JSON.parse(storedUserStr)
-          
-          if (storedUser && storedUser.id) {
-            try {
-                const response = await axios.get(`${API_URL}/${storedUser.id}`)
-                const data = response.data
+        const response = await api.get('/users/profile')
+        const data = response.data
 
-                setUsuario({
-                    id: data.id,
-                    nombre: data.nombre || data.username || 'Usuario',
-                    apellido: data.apellido || '',
-                    username: data.username || '',
-                    email: data.email || '',
-                    carrera: data.carrera || 'Ingeniería de Sistemas',
-                    semestre: data.semester ? `${data.semester}° Semestre` : (data.semestre || 'Estudiante Activo'),
-                    cedula: data.cedula || 'Sin Cédula',
-                    foto: data.foto || null,
-                    puntuacion: data.puntuacion || 0
-                })
-            } catch (serverError) {
-                console.warn("Usando datos locales", serverError)
-                setUsuario(prev => ({
-                    ...prev,
-                    id: storedUser.id,
-                    username: storedUser.username,
-                    email: storedUser.email,
-                    nombre: storedUser.nombre || storedUser.username,
-                    puntuacion: storedUser.puntuacion || 0
-                }))
-            }
-          }
+        let semestreDisplay = 'Estudiante Activo';
+        
+        if (data.semester_name) {
+            semestreDisplay = data.semester_name;
+        } else if (data.current_semester_id) {
+            semestreDisplay = `Semestre ${data.current_semester_id}`;
         }
+
+        setUsuario({
+            id: data.id,
+            nombre: data.first_name || data.username, 
+            apellido: data.last_name || '',
+            username: data.username,
+            email: data.email,
+            carrera: data.career || 'Ingeniería de Sistemas',
+            semestre: semestreDisplay, 
+            cedula: data.cedula || 'Sin Cédula',
+            foto: data.photo_url || null,
+            puntuacion: data.score || 0
+        })
+
       } catch (error) {
         console.error("Error cargando perfil:", error)
+        const storedUserStr = localStorage.getItem('currentUser')
+        if (storedUserStr) {
+           const stored = JSON.parse(storedUserStr)
+           setUsuario(prev => ({...prev, ...stored, nombre: stored.first_name || stored.nombre}))
+        }
       } finally {
         setLoading(false)
       }
@@ -109,20 +101,17 @@ const PerfilEstudiantil = () => {
 
   const handleImageChange = async (event) => {
     const file = event.target.files[0]
-    if (file && usuario.id) {
+    if (file) {
       try {
         setLoading(true)
         const base64Photo = await convertToBase64(file)
         
         setUsuario(prev => ({ ...prev, foto: base64Photo }))
-        await axios.patch(`${API_URL}/${usuario.id}`, { foto: base64Photo })
         
-        const storedUserStr = localStorage.getItem('currentUser')
-        if (storedUserStr) {
-            const storedUser = JSON.parse(storedUserStr)
-            localStorage.setItem('currentUser', JSON.stringify({ ...storedUser, foto: base64Photo }))
-        }
-
+        if (usuario.id) {
+             await api.put(`/users/${usuario.id}`, { photo_url: base64Photo })
+        } 
+        
         setSuccessMsg('¡Foto actualizada!')
         setTimeout(() => setSuccessMsg(''), 3000)
 
@@ -169,51 +158,27 @@ const PerfilEstudiantil = () => {
             background-size: 30px 30px; opacity: 0.5;
         }
 
-        /* --- CLASES DINÁMICAS (Light/Dark) --- */
-        
-        /* Caja de Información (La que se veía blanca antes) */
         .info-box-adaptable {
-            background-color: #f8f9fa; /* Gris muy claro por defecto */
+            background-color: #f8f9fa;
             color: #212529;
             border: 1px solid #dee2e6;
         }
 
-        /* AJUSTES PARA MODO OSCURO */
         [data-coreui-theme="dark"] .card-profile { background-color: #1e293b !important; color: #fff !important; }
         [data-coreui-theme="dark"] .text-dark-mode { color: #f8fafc !important; }
         [data-coreui-theme="dark"] .bg-light-mode { background-color: #334155 !important; border-color: #475569 !important; }
         [data-coreui-theme="dark"] .icon-dark-mode { color: #60a5fa !important; }
         [data-coreui-theme="dark"] .text-muted-dark { color: #cbd5e1 !important; }
-        
-        /* Modal Oscuro */
-        [data-coreui-theme="dark"] .modal-content { 
-            background-color: #1e293b !important; 
-            color: white !important; 
-            border: 1px solid #475569; 
-        }
-        
-        /* Botón de cerrar modal en oscuro */
-        [data-coreui-theme="dark"] .btn-close { 
-            filter: invert(1) grayscale(100%) brightness(200%); 
-        }
-
-        /* Corrección de la Caja de Información en Oscuro */
-        [data-coreui-theme="dark"] .info-box-adaptable {
-            background-color: #334155 !important; /* Gris azulado oscuro */
-            color: #f1f5f9 !important; /* Texto blanco */
-            border-color: #475569 !important;
-        }
-        
-        [data-coreui-theme="dark"] .text-muted-modal {
-            color: #cbd5e1 !important;
-        }
+        [data-coreui-theme="dark"] .modal-content { background-color: #1e293b !important; color: white !important; border: 1px solid #475569; }
+        [data-coreui-theme="dark"] .btn-close { filter: invert(1) grayscale(100%) brightness(200%); }
+        [data-coreui-theme="dark"] .info-box-adaptable { background-color: #334155 !important; color: #f1f5f9 !important; border-color: #475569 !important; }
+        [data-coreui-theme="dark"] .text-muted-modal { color: #cbd5e1 !important; }
       `}</style>
 
       <CRow className="justify-content-center">
         <CCol md={11} lg={10}>
           <CCard className="card-profile shadow-lg border-0 overflow-hidden" style={{ borderRadius: '20px' }}>
             
-            {/* Banner */}
             <div className="tech-banner" style={{ height: '200px' }}>
               <div className="tech-overlay"></div>
             </div>
@@ -226,7 +191,6 @@ const PerfilEstudiantil = () => {
                 </CAlert>
               )}
 
-              {/* CABECERA */}
               <div className="d-flex flex-column flex-md-row align-items-center align-items-md-end mb-5" style={{ marginTop: '-80px' }}>
                 
                 <div className="position-relative mb-3 mb-md-0 me-md-4" style={{ cursor: 'pointer' }} onClick={triggerFileSelect}>
@@ -279,7 +243,6 @@ const PerfilEstudiantil = () => {
                 </div>
               </div>
 
-              {/* EXPEDIENTE ACADÉMICO */}
               <h4 className="text-dark-mode fw-bold mb-4 border-bottom pb-2">Expediente Académico</h4>
               <CRow className="g-4">
                 <CCol md={6}>
@@ -338,7 +301,6 @@ const PerfilEstudiantil = () => {
         </CCol>
       </CRow>
 
-      {/* --- CARTA DE RENDIMIENTO FLOTANTE --- */}
       <CModal 
         visible={modalVisible} 
         onClose={() => setModalVisible(false)} 
@@ -367,7 +329,6 @@ const PerfilEstudiantil = () => {
                 {usuario.puntuacion >= 7 ? "¡Excelente Desempeño!" : "Sigue Practicando"}
             </CBadge>
 
-            {/* CAJA DE INFO CORREGIDA (clase info-box-adaptable) */}
             <div className="info-box-adaptable p-3 rounded text-start small">
                 <p className="mb-1"><strong>Estudiante:</strong> {usuario.nombre}</p>
                 <p className="mb-0"><strong>Última actualización:</strong> Hoy</p>

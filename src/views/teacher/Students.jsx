@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import axios from 'axios'
+import api from '../../api'
 import {
   CCard,
   CCardBody,
@@ -49,18 +49,15 @@ import {
 } from '@coreui/icons'
 
 const Users = () => {
-  const API_URL = 'http://localhost:3001/users'
-  
+
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedCareer, setSelectedCareer] = useState('')
 
-  // PAGINACIÓN
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 10
 
-  // Obtener rol y datos del usuario actual
   const userRole = localStorage.getItem('userRole') || 'student'
   const getCurrentUser = () => {
     try {
@@ -72,13 +69,15 @@ const Users = () => {
   }
   const currentUser = getCurrentUser()
   
-  // Si es docente, obtener su semestre asignado
   const isTeacher = userRole === 'teacher'
-  const teacherSemester = isTeacher && currentUser?.assignedSemester 
-    ? `${currentUser.assignedSemester}° Semestre` 
-    : null
+  const getTeacherSemesterId = () => {
+     if (!currentUser) return null;
+     return currentUser.assignedSemester || currentUser.assigned_semester_id;
+  }
+  const teacherSemId = isTeacher ? getTeacherSemesterId() : null;
   
-  // Modales
+  const teacherSemester = teacherSemId ? `${teacherSemId}° Semestre` : ''
+  
   const [deleteModalVisible, setDeleteModalVisible] = useState(false)
   const [editModalVisible, setEditModalVisible] = useState(false)
   const [addModalVisible, setAddModalVisible] = useState(false)
@@ -87,7 +86,6 @@ const Users = () => {
   const [userToDelete, setUserToDelete] = useState(null)
   const [userToEdit, setUserToEdit] = useState({})
 
-  // Estado del Nuevo Usuario
   const [newUser, setNewUser] = useState({
     nombre: '',
     apellido: '',
@@ -96,20 +94,18 @@ const Users = () => {
     email: '',
     password: '', 
     carrera: '',
-    semestre: teacherSemester || '', // Si es docente, fijar semestre automáticamente
+    semestre: teacherSemester || '', 
     role: 'student', 
     puntuacion: 0,
     foto: null
   })
 
-  // Errores y Animación
   const [errors, setErrors] = useState({})
   const [shake, setShake] = useState(false) 
 
-  // 1. CARGAR USUARIOS
   const fetchUsers = async () => {
     try {
-      const response = await axios.get(API_URL)
+      const response = await api.get('/users/all')
       setUsers(response.data.reverse()) 
     } catch (error) {
       console.error('Error cargando usuarios:', error)
@@ -122,56 +118,67 @@ const Users = () => {
     fetchUsers()
   }, [])
 
-  // --- BUSCADOR INTELIGENTE CON VALIDACIÓN ---
   const handleSearchChange = (e) => {
     const value = e.target.value
     
-    // Si borra todo, permitimos
     if (value === '') {
         setSearchTerm('')
         return
     }
 
-    // Detectar si lo que escribe son solo números (posible cédula)
     const isNumeric = /^\d+$/.test(value)
 
     if (isNumeric) {
-        // REGLA: Si es número, máximo 8 dígitos
         if (value.length > 8) return 
     } else {
-        // REGLA: Si es texto, máximo 40 caracteres
         if (value.length > 40) return
     }
 
     setSearchTerm(value)
-    setCurrentPage(1) // Resetear a la primera página al buscar
+    setCurrentPage(1) 
   }
 
-  // 2. FILTRADO - Excluir docentes y filtrar por semestre si es docente
   const filteredUsers = users.filter(user => {
-    // Excluir usuarios que son docentes (role='teacher') o admin
     if (user.role === 'teacher' || user.role === 'admin') return false
     
-    // Si el usuario actual es docente, solo mostrar estudiantes de su semestre
-    if (isTeacher && teacherSemester) {
-      if (user.semestre !== teacherSemester) return false
+    if (isTeacher) {
+        const teacherId = currentUser?.assignedSemester || currentUser?.assigned_semester_id;
+        
+        if (teacherId && user.semestre_id) {
+            if (user.semestre_id == teacherId) return true;
+        }
+
+        if (!teacherSemester) return false; 
+
+        const normalize = (str) => String(str).toLowerCase().trim();
+        const mapToNum = (s) => {
+            if (!s) return 0;
+            const str = normalize(s);
+            if(str.includes('1') || str.includes('primer')) return 1;
+            if(str.includes('2') || str.includes('segundo')) return 2;
+            if(str.includes('3') || str.includes('tercer')) return 3;
+            if(str.includes('4') || str.includes('cuarto')) return 4;
+            if(str.includes('5') || str.includes('quinto')) return 5;
+            if(str.includes('6') || str.includes('sexto')) return 6;
+            if(str.includes('7') || str.includes('septimo') || str.includes('séptimo')) return 7;
+            if(str.includes('8') || str.includes('octavo')) return 8;
+            return 0; 
+        }
+
+        if (mapToNum(user.semestre) !== mapToNum(teacherSemester)) return false;
     }
 
-    // Filtrar por carrera
     if (selectedCareer && user.carrera !== selectedCareer) return false
     
-    // Filtrar por término de búsqueda
     const term = searchTerm.toLowerCase()
     return (
       (user.nombre && user.nombre.toLowerCase().includes(term)) ||
       (user.username && user.username.toLowerCase().includes(term)) ||
       (user.cedula && user.cedula.toLowerCase().includes(term)) ||
       (user.email && user.email.toLowerCase().includes(term))
-      (user.email && user.email.toLowerCase().includes(term))
     )
   })
 
-  // --- LÓGICA DE PAGINACIÓN ---
   const indexOfLastItem = currentPage * itemsPerPage
   const indexOfFirstItem = indexOfLastItem - itemsPerPage
   const currentItems = filteredUsers.slice(indexOfFirstItem, indexOfLastItem)
@@ -181,7 +188,6 @@ const Users = () => {
     if (page >= 1 && page <= totalPages) setCurrentPage(page)
   }
 
-  // Generar botones de paginación inteligente
   const getSmartPagination = () => {
       const maxButtons = 3;
       let startPage = Math.max(1, currentPage - 1);
@@ -193,12 +199,10 @@ const Users = () => {
   }
   const paginationGroup = getSmartPagination();
 
-  // --- LÓGICA DE VALIDACIÓN FORMULARIO ---
   const validateForm = () => {
     let newErrors = {}
     let isValid = true
 
-    // Nombre y Apellido (Solo letras)
     const textOnlyRegex = /^[a-zA-ZÁÉÍÓÚáéíóúñÑ\s]+$/
     
     if (!newUser.nombre.trim()) { newErrors.nombre = "Nombre obligatorio"; isValid = false } 
@@ -207,23 +211,19 @@ const Users = () => {
     if (!newUser.apellido.trim()) { newErrors.apellido = "Apellido obligatorio"; isValid = false } 
     else if (!textOnlyRegex.test(newUser.apellido)) { newErrors.apellido = "Solo se permiten letras"; isValid = false }
 
-    // Cédula (7-8 dígitos, Unicidad)
     const cedulaRegex = /^\d{7,8}$/
     if (!newUser.cedula) { newErrors.cedula = "Cédula obligatoria"; isValid = false } 
     else if (!cedulaRegex.test(newUser.cedula)) { newErrors.cedula = "Debe tener 7 u 8 dígitos"; isValid = false } 
     else if (users.some(u => u.cedula === newUser.cedula)) { newErrors.cedula = "¡Esta cédula ya existe!"; isValid = false }
 
-    // Correo (Formato, Unicidad)
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
     if (!newUser.email) { newErrors.email = "Correo obligatorio"; isValid = false } 
     else if (!emailRegex.test(newUser.email)) { newErrors.email = "Formato inválido"; isValid = false } 
     else if (users.some(u => u.email === newUser.email)) { newErrors.email = "¡Correo ya registrado!"; isValid = false }
 
-    // Usuario (Unicidad)
     if (!newUser.username) { newErrors.username = "Usuario requerido"; isValid = false } 
     else if (users.some(u => u.username === newUser.username)) { newErrors.username = "Usuario ya ocupado"; isValid = false }
 
-    // Otros
     if (!newUser.password) { newErrors.password = "Contraseña requerida"; isValid = false }
     if (!newUser.semestre) { newErrors.semestre = "Selecciona semestre"; isValid = false }
     if (!newUser.carrera) { newErrors.carrera = "Selecciona carrera"; isValid = false }
@@ -232,10 +232,8 @@ const Users = () => {
     return isValid
   }
 
-  // --- LÓGICA DE AGREGAR ---
   const handleAddChange = (e) => {
     const { name, value } = e.target
-    // Bloqueos en tiempo real
     if ((name === 'nombre' || name === 'apellido') && !/^[a-zA-ZÁÉÍÓÚáéíóúñÑ\s]*$/.test(value)) return;
     if (name === 'cedula' && !/^\d*$/.test(value)) return;
 
@@ -252,21 +250,26 @@ const Users = () => {
 
     try {
       const userToCreate = {
-        ...newUser,
-        id: Date.now().toString(),
-        role: 'student', 
-        puntuacion: 0
+        username: newUser.username,
+        email: newUser.email,
+        password: newUser.password,
+        role: 'student',
+        first_name: newUser.nombre,
+        last_name: newUser.apellido,
+        cedula: newUser.cedula,
+        career: newUser.carrera,
+        current_semester_id: parseInt(newUser.semestre) || 1
       }
 
-      await axios.post(API_URL, userToCreate)
-      setUsers([userToCreate, ...users])
+      await api.post('/auth/register', userToCreate)
+      fetchUsers()
       
       setAddModalVisible(false)
       setSuccessModalVisible(true)
 
       setNewUser({
         nombre: '', apellido: '', cedula: '', username: '', email: '', password: '', carrera: '', 
-        semestre: teacherSemester || '', // Mantener semestre fijo para docentes
+        semestre: teacherSemester || '', 
         role: 'student', puntuacion: 0, foto: null
       })
       setErrors({})
@@ -274,13 +277,11 @@ const Users = () => {
       setTimeout(() => { setSuccessModalVisible(false) }, 2500)
 
     } catch (error) {
-      alert("Error de conexión con el servidor")
+       alert(error.response?.data?.error || "Error al crear usuario")
     }
   }
 
-  // --- EDITAR Y ELIMINAR ---
   const openEditModal = (user) => { 
-    // Si es docente, forzar el semestre al que tiene asignado al editar
     if (isTeacher && teacherSemester) {
       setUserToEdit({ ...user, semestre: teacherSemester })
     } else {
@@ -291,17 +292,33 @@ const Users = () => {
   const handleEditChange = (e) => { const { name, value } = e.target; setUserToEdit({ ...userToEdit, [name]: value }) }
   const saveEdit = async () => {
     try {
-      await axios.put(`${API_URL}/${userToEdit.id}`, userToEdit)
-      setUsers(users.map(u => (u.id === userToEdit.id ? userToEdit : u)))
+      const payload = {
+        first_name: userToEdit.nombre,
+        last_name: userToEdit.apellido,
+        cedula: userToEdit.cedula,
+        username: userToEdit.username,
+        email: userToEdit.email,
+        career: userToEdit.carrera,
+        current_semester_id: parseInt(userToEdit.semestre) || 1 
+      }
+
+      await api.put(`/users/${userToEdit.id}`, payload)
+      
       setEditModalVisible(false)
-      alert("Datos actualizados")
-    } catch (error) { alert("Error al guardar") }
+      fetchUsers() 
+      setSuccessModalVisible(true)
+      setTimeout(() => setSuccessModalVisible(false), 2000)
+
+    } catch (error) { 
+      console.error(error)
+      alert("Error al guardar cambios: " + (error.response?.data?.error || "Error desconocido")) 
+    }
   }
   const confirmDelete = (user) => { setUserToDelete(user); setDeleteModalVisible(true) }
   const handleDelete = async () => {
     if (userToDelete) {
       try {
-        await axios.delete(`${API_URL}/${userToDelete.id}`)
+        await api.delete(`/users/${userToDelete.id}`)
         setUsers(users.filter(u => u.id !== userToDelete.id))
         setDeleteModalVisible(false)
         setUserToDelete(null)
@@ -312,7 +329,6 @@ const Users = () => {
   return (
     <CContainer fluid>
       <style>{`
-        /* ANIMACIONES */
         @keyframes shake {
           0% { transform: translateX(0); } 25% { transform: translateX(-5px); }
           50% { transform: translateX(5px); } 75% { transform: translateX(-5px); } 100% { transform: translateX(0); }
@@ -332,7 +348,6 @@ const Users = () => {
 
         .error-msg { color: #e55353; font-size: 0.75rem; margin-top: 4px; font-weight: 600; display: flex; align-items: center; }
 
-        /* Estilos Generales */
         .search-bar-custom .input-group-text { background-color: #fff; border: 1px solid #dee2e6; border-right: none; color: #768192; }
         .search-bar-custom .form-control { background-color: #fff; border: 1px solid #dee2e6; border-left: none; color: #768192; }
         .bg-box-adaptive { background-color: #f8f9fa; border: 1px solid #dee2e6; }
@@ -340,7 +355,6 @@ const Users = () => {
         .modal-header-custom { background: linear-gradient(90deg, #1f2937 0%, #374151 100%); color: white; border-bottom: none; }
         .modal-header-custom .btn-close { filter: invert(1) grayscale(100%) brightness(200%); }
 
-        /* Dark Mode */
         [data-coreui-theme="dark"] .search-bar-custom .input-group-text { background-color: #2a303d; border-color: #3b4b60; color: #e5e7eb; }
         [data-coreui-theme="dark"] .search-bar-custom .form-control { background-color: #2a303d; border-color: #3b4b60; color: #fff; }
         [data-coreui-theme="dark"] .table { color: #e5e7eb; }
@@ -351,7 +365,6 @@ const Users = () => {
         [data-coreui-theme="dark"] .modal-footer-adaptive { background-color: #1e293b !important; border-top-color: #4b5563 !important; }
         [data-coreui-theme="dark"] .shake-animation .form-control { background-color: #4a2323 !important; border-color: #e55353 !important; }
 
-        /* Input de semestre fijado - Adaptativo para ambos temas */
         .semester-fixed-input {
           background-color: #e9ecef !important;
           color: #495057 !important;
@@ -380,7 +393,6 @@ const Users = () => {
                 </CCol>
                 <CCol md={7} className="d-flex justify-content-md-end gap-3 flex-column flex-md-row">
                   
-                  {/* FILTRO POR CARRERA */}
                   <CInputGroup className="search-bar-custom shadow-sm rounded" style={{maxWidth: '250px'}}>
                       <CInputGroupText><CIcon icon={cilBook} /></CInputGroupText>
                       <CFormSelect value={selectedCareer} onChange={(e) => setSelectedCareer(e.target.value)}>
@@ -393,13 +405,12 @@ const Users = () => {
                       </CFormSelect>
                   </CInputGroup>
 
-                  {/* BUSCADOR INTELIGENTE */}
                   <CInputGroup className="search-bar-custom shadow-sm rounded" style={{maxWidth: '300px'}}>
                     <CInputGroupText><CIcon icon={cilSearch} /></CInputGroupText>
                     <CFormInput 
                         placeholder="Buscar por nombre o cédula..." 
                         value={searchTerm} 
-                        onChange={handleSearchChange} // <-- AQUÍ ESTÁ LA VALIDACIÓN DE BÚSQUEDA
+                        onChange={handleSearchChange} 
                     />
                   </CInputGroup>
 
@@ -465,7 +476,6 @@ const Users = () => {
                 </div>
               )}
               
-              {/* PAGINACIÓN (Solo si hay más de 10 usuarios) */}
               {!loading && filteredUsers.length > 10 && (
                   <div className="d-flex justify-content-center py-4 border-top">
                       <CPagination aria-label="Navegación">
@@ -482,7 +492,6 @@ const Users = () => {
         </CCol>
       </CRow>
 
-      {/* --- MODAL AGREGAR --- */}
       <CModal visible={addModalVisible} onClose={() => setAddModalVisible(false)} size="lg" backdrop="static">
         <CModalHeader closeButton className="modal-header-custom">
             <strong><CIcon icon={cilPlus} className="me-2"/>Registrar Nuevo Estudiante</strong>
@@ -535,16 +544,28 @@ const Users = () => {
                     </CFormLabel>
                     <CInputGroup>
                          <CInputGroupText><CIcon icon={cilBook} /></CInputGroupText>
-                         {isTeacher && teacherSemester ? (
-                           // Si es docente, mostrar campo de solo lectura
-                           <CFormInput 
-                             value={teacherSemester} 
-                             readOnly 
-                             disabled
-                             className="semester-fixed-input"
-                           />
+                         {isTeacher && (currentUser?.assignedSemester || currentUser?.assigned_semester_id) ? (
+                           (() => {
+                             const rawSemester = currentUser?.assignedSemester || currentUser?.assigned_semester_id;
+                             let displaySemester = null;
+                             if (rawSemester) {
+                               const val = rawSemester;
+                               if (!isNaN(val)) {
+                                 displaySemester = `${val}° Semestre`;
+                               } else {
+                                 displaySemester = val;
+                               }
+                             }
+                             return (
+                               <CFormInput 
+                                 value={displaySemester} 
+                                 readOnly 
+                                 disabled
+                                 className="semester-fixed-input"
+                               />
+                             );
+                           })()
                          ) : (
-                           // Si es admin, mostrar selector completo
                            <CFormSelect name="semestre" value={newUser.semestre} onChange={handleAddChange} invalid={!!errors.semestre}>
                                <option value="">Seleccionar...</option>
                                {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (<option key={num} value={`${num}° Semestre`}>{num}° Semestre</option>))}
@@ -596,7 +617,6 @@ const Users = () => {
         </CModalFooter>
       </CModal>
 
-      {/* --- MODAL ÉXITO (ANIMADO) --- */}
       <CModal visible={successModalVisible} alignment="center" className="border-0">
          <CModalBody className="text-center p-5">
             <div className="mb-4 success-icon-anim">
@@ -607,7 +627,6 @@ const Users = () => {
          </CModalBody>
       </CModal>
 
-      {/* MODAL EDITAR */}
       <CModal visible={editModalVisible} onClose={() => setEditModalVisible(false)} size="lg" backdrop="static">
         <CModalHeader closeButton><strong>Editar Estudiante</strong></CModalHeader>
         <CModalBody>
@@ -618,14 +637,26 @@ const Users = () => {
                 <CCol md={6}><CFormLabel>Usuario</CFormLabel><CFormInput name="username" value={userToEdit.username} onChange={handleEditChange} /></CCol>
                 <CCol md={12}><CFormLabel>Correo</CFormLabel><CFormInput name="email" value={userToEdit.email} onChange={handleEditChange} /></CCol>
                 <CCol md={6}>
-                    <CFormLabel>Carrera</CFormLabel>
-                    <CFormSelect name="carrera" value={userToEdit.carrera} onChange={handleEditChange}>
-                        <option value="Ingeniería de Sistemas">Ingeniería de Sistemas</option>
-                        <option value="Ingeniería Civil">Ingeniería Civil</option>
-                        <option value="Ingeniería Eléctrica">Ingeniería Eléctrica</option>
-                        <option value="Licenciatura en Turismo">Licenciatura en Turismo</option>
-                        <option value="Licenciatura en Administración">Licenciatura en Administración</option>
-                    </CFormSelect>
+                    <CFormLabel>
+                      Carrera
+                      {isTeacher && <CBadge color="info" className="ms-2">Fijado</CBadge>}
+                    </CFormLabel>
+                    {isTeacher ? (
+                        <CFormInput 
+                          value={userToEdit.carrera} 
+                          readOnly 
+                          disabled
+                          className="semester-fixed-input"
+                        />
+                    ) : (
+                      <CFormSelect name="carrera" value={userToEdit.carrera} onChange={handleEditChange}>
+                          <option value="Ingeniería de Sistemas">Ingeniería de Sistemas</option>
+                          <option value="Ingeniería Civil">Ingeniería Civil</option>
+                          <option value="Ingeniería Eléctrica">Ingeniería Eléctrica</option>
+                          <option value="Licenciatura en Turismo">Licenciatura en Turismo</option>
+                          <option value="Licenciatura en Administración">Licenciatura en Administración</option>
+                      </CFormSelect>
+                    )}
                 </CCol>
                 <CCol md={6}>
                     <CFormLabel>
@@ -633,7 +664,6 @@ const Users = () => {
                       {isTeacher && <CBadge color="info" className="ms-2">Fijado</CBadge>}
                     </CFormLabel>
                     {isTeacher && teacherSemester ? (
-                      // Si es docente, mostrar campo de solo lectura
                       <CFormInput 
                         value={teacherSemester} 
                         readOnly 
@@ -641,7 +671,6 @@ const Users = () => {
                         className="semester-fixed-input"
                       />
                     ) : (
-                      // Si es admin, mostrar selector completo
                       <CFormSelect name="semestre" value={userToEdit.semestre} onChange={handleEditChange}>
                           <option value="">Seleccionar...</option>
                           {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (<option key={num} value={`${num}° Semestre`}>{num}° Semestre</option>))}
@@ -657,7 +686,6 @@ const Users = () => {
         </CModalFooter>
       </CModal>
 
-      {/* MODAL ELIMINAR */}
       <CModal visible={deleteModalVisible} onClose={() => setDeleteModalVisible(false)} alignment="center" backdrop="static">
         <CModalHeader closeButton><strong className="text-danger">Eliminar Estudiante</strong></CModalHeader>
         <CModalBody className="text-center py-4">

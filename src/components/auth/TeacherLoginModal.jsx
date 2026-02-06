@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react'
+import axios from 'axios'
 import {
   CModal,
   CModalHeader,
@@ -31,7 +32,7 @@ const AdminLoginModal = ({ visible, onClose, onSuccess }) => {
     setTimeout(() => setIsShaking(false), 500)
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     setError('')
     setErrorCedula(false)
     setErrorPassword(false)
@@ -41,17 +42,31 @@ const AdminLoginModal = ({ visible, onClose, onSuccess }) => {
       return
     }
 
-    if (cedula.length < 7 || cedula.length > 8) {
-      triggerError('La cédula debe tener entre 7 y 8 dígitos', 'cedula')
-      return
-    }
+    try {
+        const API_URL = 'http://localhost:5000/api/auth/login'
+        const response = await axios.post(API_URL, {
+            identifier: cedula, 
+            password: password
+        })
 
-    if (cedula === '12345678' && password === 'admin2026') {
-      setError('')
-      handleClose()
-      if (onSuccess) onSuccess()
-    } else {
-      triggerError('Credenciales de seguridad incorrectas', 'both')
+        const { token, user } = response.data
+
+        if (user.role !== 'admin') {
+            triggerError('Esta cuenta no es de Administrador', 'both')
+            return
+        }
+
+        localStorage.setItem('isAuthenticated', 'true')
+        localStorage.setItem('token', token)
+        localStorage.setItem('userRole', user.role)
+        localStorage.setItem('currentUser', JSON.stringify(user))
+
+        handleClose()
+        if (onSuccess) onSuccess()
+
+    } catch (err) {
+        console.error(err)
+        triggerError('Credenciales incorrectas', 'both')
     }
   }
 
@@ -98,11 +113,10 @@ const AdminLoginModal = ({ visible, onClose, onSuccess }) => {
             font-weight: 600 !important;
           }
 
-          /* CAMBIO SOLICITADO: Placeholder (V-) en negrita y negro */
           .input-custom::placeholder {
             color: #000000 !important;
             font-weight: 800 !important;
-            opacity: 1; /* Asegura que se vea fuerte */
+            opacity: 1; 
           }
 
           .input-custom:focus {

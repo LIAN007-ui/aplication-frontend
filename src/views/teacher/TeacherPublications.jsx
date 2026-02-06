@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import axios from 'axios'
+import api from '../../api'
 import {
   CCard,
   CCardBody,
@@ -19,28 +19,33 @@ import CIcon from '@coreui/icons-react'
 import { cilNotes, cilCheckCircle, cilTrash, cilCalendar } from '@coreui/icons'
 
 const TeacherPublications = () => {
-  const API_URL = 'http://localhost:3001'
 
   const [loading, setLoading] = useState(true)
   const [publications, setPublications] = useState([])
   const [currentUser, setCurrentUser] = useState(null)
 
-  // Form
   const [newPublication, setNewPublication] = useState({ title: '', content: '' })
   const [message, setMessage] = useState({ type: '', text: '' })
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('currentUser'))
-    setCurrentUser(user)
-    if (user) {
-      fetchPublications(user.assignedSemester)
+    const init = async () => {
+        try {
+            const { data: user } = await api.get('/users/profile')
+            setCurrentUser(user)
+            if (user && user.assigned_semester_id) {
+                fetchPublications(user.assigned_semester_id)
+            }
+        } catch (e) {
+            console.error("Error cargando perfil docente", e)
+        }
     }
+    init()
   }, [])
 
   const fetchPublications = async (semester) => {
     try {
-      const res = await axios.get(`${API_URL}/publications?semester=${semester}`)
+      const res = await api.get(`/publications/semester/${semester}`)
       setPublications(res.data.reverse())
     } catch (error) {
       console.error('Error fetching publications:', error)
@@ -61,19 +66,15 @@ const TeacherPublications = () => {
     setSubmitting(true)
     try {
       const pubData = {
-        id: `pub${Date.now()}`,
         title: newPublication.title,
         content: newPublication.content,
-        semester: currentUser.assignedSemester,
-        teacherId: currentUser.id,
-        teacherName: currentUser.name || currentUser.username,
-        createdAt: new Date().toISOString(),
+        semester_id: currentUser.assigned_semester_id 
       }
 
-      await axios.post(`${API_URL}/publications`, pubData)
+      await api.post(`/publications`, pubData)
       setMessage({ type: 'success', text: '¡Publicación creada exitosamente!' })
       setNewPublication({ title: '', content: '' })
-      fetchPublications(currentUser.assignedSemester)
+      fetchPublications(currentUser.assigned_semester_id)
     } catch (error) {
       setMessage({ type: 'danger', text: 'Error al crear la publicación' })
     } finally {
@@ -82,10 +83,10 @@ const TeacherPublications = () => {
   }
 
   const handleDelete = async (id) => {
-    if (!window.confirm('¿Estás seguro de eliminar esta publicación?')) return
+    if (!window.confirm('¿Estás seguro de eliminar esta publicaciones?')) return
     
     try {
-      await axios.delete(`${API_URL}/publications/${id}`)
+      await api.delete(`/publications/${id}`)
       setPublications(publications.filter(p => p.id !== id))
     } catch (error) {
       console.error('Error deleting:', error)
@@ -121,8 +122,7 @@ const TeacherPublications = () => {
           background-color: rgba(59, 130, 246, 0.02);
         }
       `}</style>
-
-      {/* Header */}
+      
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
           <h2 className="mb-1 fw-bold">
@@ -130,7 +130,7 @@ const TeacherPublications = () => {
             Publicaciones
           </h2>
           <span className="text-muted">
-            Crea y gestiona contenido para el Semestre {currentUser?.assignedSemester}
+            Crea y gestiona contenido para el Semestre {currentUser?.assigned_semester_id}
           </span>
         </div>
         <CBadge color="info" className="px-3 py-2 fs-6">
@@ -190,8 +190,7 @@ const TeacherPublications = () => {
             </CCardBody>
           </CCard>
         </CCol>
-
-        {/* Publications List */}
+        
         <CCol lg={7}>
           <h5 className="fw-bold mb-3">Publicaciones Recientes</h5>
           

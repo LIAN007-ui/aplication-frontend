@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import axios from 'axios'
+import api from '../../api'
 import {
   CCard, CCardBody, CCardHeader, CCol, CRow, CTable, CTableBody, CTableHead, CTableHeaderCell, CTableRow, CTableDataCell,
   CButton, CFormInput, CFormTextarea, CInputGroup, CInputGroupText, CModal, CModalHeader, CModalBody, CModalFooter, CSpinner, CContainer, CFormLabel,
@@ -12,58 +12,56 @@ import {
 } from '@coreui/icons'
 
 const Publications = () => {
-  const API_URL = 'http://localhost:3001/publications'
   
   const [posts, setPosts] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const fileInputRef = useRef(null)
+  
+  const [teacherProfile, setTeacherProfile] = useState(null)
 
-  // PAGINACIÓN
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 5
 
-  // MODALES
   const [modalVisible, setModalVisible] = useState(false)
   const [deleteModalVisible, setDeleteModalVisible] = useState(false)
   const [fileErrorModalVisible, setFileErrorModalVisible] = useState(false)
   const [successModalVisible, setSuccessModalVisible] = useState(false)
   
-  // ESTADO DEL FORMULARIO (Sin categoría)
   const [isEditing, setIsEditing] = useState(false)
   const [currentPost, setCurrentPost] = useState({
     id: '', 
     title: '',      
     content: '',       
     createdAt: '',       
-    mediaUrl: null  
+    mediaUrl: null,
+    fileRaw: null 
   })
   const [postToDelete, setPostToDelete] = useState(null)
 
-  // VALIDACIONES
   const [errors, setErrors] = useState({})
   const [shake, setShake] = useState(false)
 
-  // CARGAR DATOS (filtrado por semestre del docente)
   const fetchPosts = async () => {
     try {
-      // Obtener el semestre asignado al docente
-      let assignedSemester = null
-      const storedUser = localStorage.getItem('currentUser')
-      if (storedUser) {
-        const user = JSON.parse(storedUser)
-        assignedSemester = user.assignedSemester
-      }
+      setLoading(true)
+      
+      const profileRes = await api.get('/users/profile')
+      const profile = profileRes.data
+      setTeacherProfile(profile)
+      
+      const semesterId = profile.assigned_semester_id
 
-      // Filtrar por semestre del docente
-      let url = API_URL
-      if (assignedSemester) {
-        url += `?semester=${assignedSemester}`
-      }
-
-      const response = await axios.get(url)
-      if (Array.isArray(response.data)) {
-        setPosts(response.data.reverse())
+      if (semesterId) {
+        const response = await api.get(`/publications/semester/${semesterId}`)
+        
+        const mappedPosts = response.data.map(p => ({
+            ...p,
+            createdAt: p.created_at, 
+            mediaUrl: p.file_attachment_url 
+        }))
+        
+        setPosts(mappedPosts)
       } else {
         setPosts([])
       }
@@ -77,14 +75,12 @@ const Publications = () => {
 
   useEffect(() => { fetchPosts() }, [])
 
-  // FILTRADO (Solo por título)
   const filteredPosts = posts.filter(p => 
     (p.title && p.title.toLowerCase().includes(searchTerm.toLowerCase()))
   )
 
   useEffect(() => { setCurrentPage(1) }, [searchTerm])
 
-  // PAGINACIÓN
   const indexOfLastItem = currentPage * itemsPerPage
   const indexOfFirstItem = indexOfLastItem - itemsPerPage
   const currentItems = filteredPosts.slice(indexOfFirstItem, indexOfLastItem)
@@ -105,7 +101,6 @@ const Publications = () => {
   }
   const paginationGroup = getSmartPagination();
 
-  // IMÁGENES (Base64)
   const convertToBase64 = (file) => {
     return new Promise((resolve, reject) => {
       const reader = new FileReader()
@@ -118,20 +113,18 @@ const Publications = () => {
   const handleImageUpload = async (e) => {
     const file = e.target.files[0]
     if (file) {
-        // Límite aumentado a 10MB
         if (file.size > 10 * 1024 * 1024) { 
             setFileErrorModalVisible(true)
-            e.target.value = null // Limpiar input
+            e.target.value = null
             return
         }
         try {
             const base64 = await convertToBase64(file)
-            setCurrentPost({ ...currentPost, mediaUrl: base64 })
+            setCurrentPost({ ...currentPost, mediaUrl: base64, fileRaw: file })
         } catch (err) { console.error(err) }
     }
   }
 
-  // FORMULARIO
   const handleInputChange = (e) => {
     const { name, value } = e.target
     setCurrentPost({ ...currentPost, [name]: value })
@@ -154,33 +147,29 @@ const Publications = () => {
         return
     }
 
-    // Obtener información del docente actual
-    let currentUserData = null
-    const storedUser = localStorage.getItem('currentUser')
-    if (storedUser) {
-      currentUserData = JSON.parse(storedUser)
-    }
-
-    const today = new Date().toISOString()
-    const payload = { 
-      ...currentPost, 
-      createdAt: isEditing ? currentPost.createdAt : today,
-      // Agregar campos del semestre y docente
-      semester: currentUserData?.assignedSemester || currentPost.semester,
-      teacherId: currentUserData?.id || currentPost.teacherId,
-      teacherName: currentUserData?.name || currentUserData?.username || currentPost.teacherName
+    const formData = new FormData();
+    formData.append('title', currentPost.title);
+    formData.append('content', currentPost.content);
+    formData.append('semester_id', teacherProfile?.assigned_semester_id);
+    
+    if (currentPost.fileRaw) {
+        formData.append('file', currentPost.fileRaw);
     }
 
     try {
         if (isEditing) {
-            await axios.put(`${API_URL}/${currentPost.id}`, payload)
-            setPosts(posts.map(p => (p.id === currentPost.id ? payload : p)))
+             await api.put(`/publications/${currentPost.id}`, formData, {
+                 headers: { 'Content-Type': 'multipart/form-data' }
+             })
         } else {
-            const res = await axios.post(API_URL, { ...payload, id: Date.now().toString() })
-            setPosts([res.data, ...posts])
+            await api.post('/publications', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            })
         }
+        
         setModalVisible(false)
-        setSuccessModalVisible(true) // Mostrar animación de éxito
+        setSuccessModalVisible(true)
+        fetchPosts() 
         
         setTimeout(() => {
             setSuccessModalVisible(false)
@@ -188,17 +177,20 @@ const Publications = () => {
         }, 2000)
 
     } catch (error) { 
-        alert("Error de conexión. Verifica que json-server esté corriendo.") 
+        console.error(error)
+        alert("Error al guardar. Verifica el tamaño del archivo o tu conexión.") 
     }
   }
 
   const handleDelete = async () => {
     if (postToDelete) {
         try {
-            await axios.delete(`${API_URL}/${postToDelete.id}`)
+            await api.delete(`/publications/${postToDelete.id}`)
             setPosts(posts.filter(p => p.id !== postToDelete.id))
             setDeleteModalVisible(false)
-        } catch (error) { alert("Error al eliminar") }
+        } catch (error) { 
+            alert("Error al eliminar") 
+        }
     }
   }
 
@@ -215,14 +207,13 @@ const Publications = () => {
   }
 
   const resetForm = () => {
-    setCurrentPost({ id: '', title: '', content: '', createdAt: '', mediaUrl: null })
+    setCurrentPost({ id: '', title: '', content: '', createdAt: '', mediaUrl: null, fileRaw: null })
     if (fileInputRef.current) fileInputRef.current.value = ""
   }
 
   return (
     <CContainer fluid>
       <style>{`
-        /* ESTILOS EXACTOS (USERS/PREGUNTAS) */
         .search-bar-custom .input-group-text { background-color: #fff; border: 1px solid #dee2e6; border-right: none; color: #768192; }
         .search-bar-custom .form-control { background-color: #fff; border: 1px solid #dee2e6; border-left: none; color: #768192; }
         .bg-box-adaptive { background-color: #f8f9fa; border: 1px solid #dee2e6; }
@@ -236,7 +227,6 @@ const Publications = () => {
         @keyframes popIn { 0% { transform: scale(0.5); opacity: 0; } 80% { transform: scale(1.1); opacity: 1; } 100% { transform: scale(1); } }
         .success-icon-anim { animation: popIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55) both; }
 
-        /* MODO OSCURO */
         [data-coreui-theme="dark"] .search-bar-custom .input-group-text { background-color: #2a303d; border-color: #3b4b60; color: #e5e7eb; }
         [data-coreui-theme="dark"] .search-bar-custom .form-control { background-color: #2a303d; border-color: #3b4b60; color: #fff; }
         [data-coreui-theme="dark"] .table { color: #e5e7eb; }
@@ -297,10 +287,8 @@ const Publications = () => {
                                 {currentItems.map(item => (
                                     <CTableRow key={item.id}>
                                         
-                                        {/* COLUMNA 1: IMAGEN + INFO */}
                                         <CTableDataCell className="ps-4 py-3">
                                             <div className="d-flex align-items-center">
-                                                {/* Miniatura */}
                                                 <div className="me-3 bg-light border d-flex align-items-center justify-content-center rounded overflow-hidden shadow-sm" style={{width: '60px', height: '60px', flexShrink: 0}}>
                                                     {item.mediaUrl ? (
                                                         item.mediaUrl.startsWith('data:image') ? 
@@ -317,7 +305,6 @@ const Publications = () => {
                                             </div>
                                         </CTableDataCell>
 
-                                        {/* COLUMNA 2: FECHA */}
                                         <CTableDataCell className="text-center">
                                             <div className="small text-muted fw-semibold">
                                                 <CIcon icon={cilCalendar} size="sm" className="me-2 text-primary"/>
@@ -325,7 +312,6 @@ const Publications = () => {
                                             </div>
                                         </CTableDataCell>
 
-                                        {/* COLUMNA 3: ACCIONES */}
                                         <CTableDataCell className="text-end pe-4">
                                             <div className="d-flex gap-2 justify-content-end">
                                                 <CButton color="info" variant="ghost" size="sm" onClick={() => openModal(item)} title="Editar"><CIcon icon={cilPencil}/></CButton>
@@ -345,7 +331,6 @@ const Publications = () => {
                         </CTable>
                     </div>
 
-                    {/* PAGINACIÓN */}
                     {totalPages > 1 && (
                         <div className="d-flex justify-content-center py-4 border-top">
                             <CPagination aria-label="Navegación">
@@ -364,7 +349,6 @@ const Publications = () => {
         </CCol>
       </CRow>
 
-      {/* --- MODAL CREAR/EDITAR --- */}
       <CModal visible={modalVisible} onClose={() => setModalVisible(false)} size="lg" backdrop="static">
         <CModalHeader closeButton className="modal-header-custom">
             <strong><CIcon icon={isEditing ? cilPencil : cilPlus} className="me-2"/>{isEditing ? 'Editar Publicación' : 'Nueva Publicación'}</strong>
@@ -395,7 +379,7 @@ const Publications = () => {
                     )}
                 </div>
                 <div>
-                    <h6 className="mb-1 fw-bold text-primary">Archivo Adjunto (Imagen/PDF)</h6>
+                    <h6 className="mb-1 fw-bold text-primary">Archivo Adjunto (PDF, Word, Imagen)</h6>
                     <small className="text-muted d-block mb-2">Máximo 10MB.</small>
                     <input type="file" ref={fileInputRef} onChange={handleImageUpload} style={{display: 'none'}} />
                     <div className="d-flex gap-2">
@@ -412,7 +396,6 @@ const Publications = () => {
         </CModalFooter>
       </CModal>
 
-      {/* --- MODAL ELIMINAR --- */}
       <CModal visible={deleteModalVisible} onClose={() => setDeleteModalVisible(false)} alignment="center" backdrop="static">
         <CModalHeader closeButton className="border-bottom-0"></CModalHeader>
         <CModalBody className="text-center p-4">
@@ -426,7 +409,6 @@ const Publications = () => {
         </CModalBody>
       </CModal>
 
-      {/* --- MODAL ERROR DE ARCHIVO PESADO (DINÁMICO) --- */}
       <CModal visible={fileErrorModalVisible} onClose={() => setFileErrorModalVisible(false)} size="xl" alignment="center">
          <CModalBody className="text-center p-5 d-flex flex-column align-items-center justify-content-center" style={{minHeight: '400px'}}>
              <div className="mb-4 shake-animation">
@@ -440,7 +422,6 @@ const Publications = () => {
          </CModalBody>
       </CModal>
 
-      {/* --- MODAL ÉXITO (ANIMACIÓN) --- */}
       <CModal visible={successModalVisible} alignment="center" className="border-0">
           <CModalBody className="text-center p-5">
             <div className="mb-4 success-icon-anim">

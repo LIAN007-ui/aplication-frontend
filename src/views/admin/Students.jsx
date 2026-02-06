@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import axios from 'axios'
+import api from '../../api'
 import {
   CCard,
   CCardBody,
@@ -50,27 +50,24 @@ import {
 } from '@coreui/icons'
 
 const AdminStudents = () => {
-  const API_URL = 'http://localhost:3001/users'
 
   const [users, setUsers] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterSemester, setFilterSemester] = useState('all')
 
-  // Paginación
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 5
 
-  // Modales
   const [deleteModalVisible, setDeleteModalVisible] = useState(false)
   const [editModalVisible, setEditModalVisible] = useState(false)
   const [addModalVisible, setAddModalVisible] = useState(false)
   const [successModalVisible, setSuccessModalVisible] = useState(false)
+  const [successMessage, setSuccessMessage] = useState('¡Operación Exitosa!')
 
   const [userToDelete, setUserToDelete] = useState(null)
   const [userToEdit, setUserToEdit] = useState({})
 
-  // Estado del Nuevo Usuario
   const [newUser, setNewUser] = useState({
     nombre: '',
     apellido: '',
@@ -85,16 +82,31 @@ const AdminStudents = () => {
     foto: null
   })
 
-  // Errores y Animación
   const [errors, setErrors] = useState({})
   const [shake, setShake] = useState(false)
 
-  // CARGAR USUARIOS (solo estudiantes)
   const fetchUsers = async () => {
     try {
-      const response = await axios.get(API_URL)
+      const response = await api.get('/users/all')
       const students = response.data.filter(u => u.role === 'student')
-      setUsers(students.reverse())
+
+      const semMap = {
+        'Primer Semestre': '1° Semestre',
+        'Segundo Semestre': '2° Semestre',
+        'Tercer Semestre': '3° Semestre',
+        'Cuarto Semestre': '4° Semestre',
+        'Quinto Semestre': '5° Semestre',
+        'Sexto Semestre': '6° Semestre',
+        'Séptimo Semestre': '7° Semestre',
+        'Octavo Semestre': '8° Semestre'
+      }
+
+      const processedStudents = students.map(s => ({
+          ...s,
+          semestre: semMap[s.semestre] || s.semestre || 'Sin asignar' 
+      }))
+
+      setUsers(processedStudents.reverse())
     } catch (error) {
       console.error('Error cargando usuarios:', error)
     } finally {
@@ -106,7 +118,6 @@ const AdminStudents = () => {
     fetchUsers()
   }, [])
 
-  // BUSCADOR
   const handleSearchChange = (e) => {
     const value = e.target.value
     if (value === '') {
@@ -122,7 +133,6 @@ const AdminStudents = () => {
     setSearchTerm(value)
   }
 
-  // FILTRADO
   const filteredUsers = users.filter(user => {
     const term = searchTerm.toLowerCase()
     const matchesSearch = (
@@ -135,10 +145,8 @@ const AdminStudents = () => {
     return matchesSearch && matchesSemester
   })
 
-  // Resetear página al filtrar
   useEffect(() => { setCurrentPage(1) }, [searchTerm, filterSemester])
 
-  // PAGINACIÓN
   const indexOfLastItem = currentPage * itemsPerPage
   const indexOfFirstItem = indexOfLastItem - itemsPerPage
   const currentItems = filteredUsers.slice(indexOfFirstItem, indexOfLastItem)
@@ -148,7 +156,6 @@ const AdminStudents = () => {
     if (page >= 1 && page <= totalPages) setCurrentPage(page)
   }
 
-  // VALIDACIÓN FORMULARIO
   const validateForm = () => {
     let newErrors = {}
     let isValid = true
@@ -182,7 +189,6 @@ const AdminStudents = () => {
     return isValid
   }
 
-  // FORMULARIO AGREGAR
   const handleAddChange = (e) => {
     const { name, value } = e.target
     if ((name === 'nombre' || name === 'apellido') && !/^[a-zA-ZÁÉÍÓÚáéíóúñÑ\s]*$/.test(value)) return;
@@ -200,16 +206,23 @@ const AdminStudents = () => {
 
     try {
       const userToCreate = {
-        ...newUser,
-        id: `student${Date.now()}`,
+        username: newUser.username,
+        email: newUser.email,
+        password: newUser.password,
         role: 'student',
-        puntuacion: 0
+        first_name: newUser.nombre,
+        last_name: newUser.apellido,
+        cedula: newUser.cedula,
+        career: newUser.carrera,
+        current_semester_id: parseInt(newUser.semestre) || 1 
       }
 
-      await axios.post(API_URL, userToCreate)
-      setUsers([userToCreate, ...users])
+      await api.post('/auth/register', userToCreate)
+      
+      fetchUsers() 
 
       setAddModalVisible(false)
+      setSuccessMessage('¡Estudiante registrado exitosamente!')
       setSuccessModalVisible(true)
 
       setNewUser({
@@ -220,11 +233,10 @@ const AdminStudents = () => {
       setTimeout(() => { setSuccessModalVisible(false) }, 2500)
 
     } catch (error) {
-      alert("Error de conexión con el servidor")
+      alert(error.response?.data?.error || "Error al crear usuario")
     }
   }
 
-  // EDITAR Y ELIMINAR
   const openEditModal = (user) => {
     setUserToEdit(user)
     setEditModalVisible(true)
@@ -237,11 +249,28 @@ const AdminStudents = () => {
 
   const saveEdit = async () => {
     try {
-      await axios.put(`${API_URL}/${userToEdit.id}`, userToEdit)
-      setUsers(users.map(u => (u.id === userToEdit.id ? userToEdit : u)))
+      const payload = {
+        username: userToEdit.username,
+        email: userToEdit.email,
+        first_name: userToEdit.nombre,
+        last_name: userToEdit.apellido,
+        cedula: userToEdit.cedula,
+        career: userToEdit.carrera,
+        current_semester_id: parseInt(userToEdit.semestre) || 1 
+      }
+
+      await api.patch(`/users/${userToEdit.id}`, payload)
+      
+      fetchUsers()
       setEditModalVisible(false)
-      alert("Datos actualizados")
-    } catch (error) { alert("Error al guardar") }
+      
+      setSuccessMessage('¡Estudiante actualizado correctamente!')
+      setSuccessModalVisible(true)
+      setTimeout(() => { setSuccessModalVisible(false) }, 2500)
+    } catch (error) { 
+      console.error(error)
+      alert(error.response?.data?.error || "Error al actualizar") 
+    }
   }
 
   const confirmDelete = (user) => {
@@ -252,15 +281,17 @@ const AdminStudents = () => {
   const handleDelete = async () => {
     if (userToDelete) {
       try {
-        await axios.delete(`${API_URL}/${userToDelete.id}`)
+        await api.delete(`/users/${userToDelete.id}`)
         setUsers(users.filter(u => u.id !== userToDelete.id))
         setDeleteModalVisible(false)
         setUserToDelete(null)
-      } catch (error) { alert('Error al eliminar') }
+      } catch (error) { 
+        console.error("Error eliminando:", error)
+        alert(error.response?.data?.error || error.message || "Error al eliminar") 
+      }
     }
   }
 
-  // Obtener semestres únicos para el filtro
   const uniqueSemesters = [...new Set(users.map(u => u.semestre).filter(Boolean))].sort()
 
   return (
@@ -292,7 +323,6 @@ const AdminStudents = () => {
         .modal-header-custom { background: linear-gradient(90deg, #1f2937 0%, #374151 100%); color: white; border-bottom: none; }
         .modal-header-custom .btn-close { filter: invert(1) grayscale(100%) brightness(200%); }
 
-        /* Dark Mode */
         [data-coreui-theme="dark"] .search-bar-custom .input-group-text { background-color: #2a303d; border-color: #3b4b60; color: #e5e7eb; }
         [data-coreui-theme="dark"] .search-bar-custom .form-control { background-color: #2a303d; border-color: #3b4b60; color: #fff; }
         [data-coreui-theme="dark"] .table { color: #e5e7eb; }
@@ -320,7 +350,6 @@ const AdminStudents = () => {
                   <small className="text-muted">{filteredUsers.length} estudiantes {filterSemester !== 'all' ? `en ${filterSemester}` : 'registrados'}</small>
                 </CCol>
                 <CCol md={8} className="d-flex justify-content-md-end gap-2 flex-wrap">
-                  {/* Filtro por Semestre */}
                   <CInputGroup style={{ maxWidth: '180px' }}>
                     <CInputGroupText><CIcon icon={cilFilter} /></CInputGroupText>
                     <CFormSelect value={filterSemester} onChange={e => setFilterSemester(e.target.value)}>
@@ -331,7 +360,6 @@ const AdminStudents = () => {
                     </CFormSelect>
                   </CInputGroup>
 
-                  {/* Buscador */}
                   <CInputGroup className="search-bar-custom shadow-sm rounded" style={{ maxWidth: '250px' }}>
                     <CInputGroupText><CIcon icon={cilSearch} /></CInputGroupText>
                     <CFormInput
@@ -409,7 +437,6 @@ const AdminStudents = () => {
                     </CTable>
                   </div>
 
-                  {/* Paginación */}
                   {totalPages > 1 && (
                     <div className="d-flex justify-content-between align-items-center px-4 py-3 border-top">
                       <small className="text-muted">
@@ -436,7 +463,6 @@ const AdminStudents = () => {
         </CCol>
       </CRow>
 
-      {/* --- MODAL AGREGAR --- */}
       <CModal visible={addModalVisible} onClose={() => setAddModalVisible(false)} size="lg" backdrop="static">
         <CModalHeader closeButton className="modal-header-custom">
           <strong><CIcon icon={cilPlus} className="me-2" />Registrar Nuevo Estudiante</strong>
@@ -534,18 +560,16 @@ const AdminStudents = () => {
         </CModalFooter>
       </CModal>
 
-      {/* --- MODAL ÉXITO --- */}
       <CModal visible={successModalVisible} alignment="center" className="border-0">
         <CModalBody className="text-center p-5">
           <div className="mb-4 success-icon-anim">
             <CIcon icon={cilCheckCircle} size="5xl" className="text-success" />
           </div>
-          <h2 className="fw-bold text-success mb-2">¡Registro Exitoso!</h2>
-          <p className="text-muted">El estudiante ha sido creado correctamente.</p>
+          <h2 className="fw-bold text-success mb-2">{successMessage}</h2>
+          <p className="text-muted">La operación se completó correctamente.</p>
         </CModalBody>
       </CModal>
 
-      {/* MODAL EDITAR */}
       <CModal visible={editModalVisible} onClose={() => setEditModalVisible(false)} size="lg" backdrop="static">
         <CModalHeader closeButton className="modal-header-custom"><strong>Editar Estudiante</strong></CModalHeader>
         <CModalBody className="p-4">
@@ -581,7 +605,6 @@ const AdminStudents = () => {
         </CModalFooter>
       </CModal>
 
-      {/* MODAL ELIMINAR */}
       <CModal visible={deleteModalVisible} onClose={() => setDeleteModalVisible(false)} alignment="center" backdrop="static">
         <CModalHeader closeButton><strong className="text-danger">Eliminar Estudiante</strong></CModalHeader>
         <CModalBody className="text-center py-4">
@@ -594,7 +617,6 @@ const AdminStudents = () => {
           <CButton color="danger" className="text-white" onClick={handleDelete}>Eliminar</CButton>
         </CModalFooter>
       </CModal>
-
     </CContainer>
   )
 }

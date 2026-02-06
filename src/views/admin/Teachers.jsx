@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import axios from 'axios'
+import api from '../../api'
 import {
   CCard,
   CCardBody,
@@ -46,13 +46,12 @@ import {
 } from '@coreui/icons'
 
 const AdminTeachers = () => {
-  const API_URL = 'http://localhost:3001/users'
+
 
   const [teachers, setTeachers] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
 
-  // Modales
   const [deleteModalVisible, setDeleteModalVisible] = useState(false)
   const [editModalVisible, setEditModalVisible] = useState(false)
   const [addModalVisible, setAddModalVisible] = useState(false)
@@ -62,7 +61,6 @@ const AdminTeachers = () => {
   const [teacherToDelete, setTeacherToDelete] = useState(null)
   const [teacherToEdit, setTeacherToEdit] = useState({})
 
-  // Estado del Nuevo Docente
   const [newTeacher, setNewTeacher] = useState({
     name: '',
     username: '',
@@ -73,15 +71,13 @@ const AdminTeachers = () => {
     photo: ''
   })
 
-  // Errores y Animación
   const [errors, setErrors] = useState({})
   const [shake, setShake] = useState(false)
   const [formError, setFormError] = useState('')
 
-  // CARGAR DOCENTES
   const fetchTeachers = async () => {
     try {
-      const response = await axios.get(API_URL)
+      const response = await api.get('/users/all')
       const teachersList = response.data.filter(u => u.role === 'teacher')
       setTeachers(teachersList)
     } catch (error) {
@@ -95,7 +91,6 @@ const AdminTeachers = () => {
     fetchTeachers()
   }, [])
 
-  // FILTRADO
   const filteredTeachers = teachers.filter(t => {
     const term = searchTerm.toLowerCase()
     return (
@@ -105,7 +100,6 @@ const AdminTeachers = () => {
     )
   })
 
-  // VALIDACIÓN FORMULARIO
   const validateForm = () => {
     let newErrors = {}
     let isValid = true
@@ -129,7 +123,6 @@ const AdminTeachers = () => {
     return isValid
   }
 
-  // FORMULARIO AGREGAR
   const handleAddChange = (e) => {
     const { name, value } = e.target
     if (name === 'name' && !/^[a-zA-ZÁÉÍÓÚáéíóúñÑ\s]*$/.test(value)) return;
@@ -147,13 +140,16 @@ const AdminTeachers = () => {
 
     try {
       const teacherToCreate = {
-        ...newTeacher,
-        id: `teacher${Date.now()}`,
-        role: 'teacher'
+        username: newTeacher.username,
+        email: newTeacher.email,
+        password: newTeacher.password,
+        role: 'teacher',
+        full_name: newTeacher.name, 
+        assigned_semester_id: parseInt(newTeacher.assignedSemester) 
       }
 
-      await axios.post(API_URL, teacherToCreate)
-      setTeachers([...teachers, teacherToCreate])
+      await api.post('/auth/register', teacherToCreate)
+      fetchTeachers()
 
       setAddModalVisible(false)
       setSuccessMessage('¡Docente creado exitosamente!')
@@ -167,11 +163,10 @@ const AdminTeachers = () => {
       setTimeout(() => { setSuccessModalVisible(false) }, 2500)
 
     } catch (error) {
-      setFormError("Error de conexión con el servidor")
+      setFormError(error.response?.data?.error || "Error al registrar docente")
     }
   }
 
-  // EDITAR
   const openEditModal = (teacher) => {
     setTeacherToEdit({ ...teacher })
     setEditModalVisible(true)
@@ -184,16 +179,11 @@ const AdminTeachers = () => {
 
   const saveEdit = async () => {
     try {
-      await axios.put(`${API_URL}/${teacherToEdit.id}`, teacherToEdit)
-      setTeachers(teachers.map(t => (t.id === teacherToEdit.id ? teacherToEdit : t)))
       setEditModalVisible(false)
-      setSuccessMessage('Datos del docente actualizados')
-      setSuccessModalVisible(true)
-      setTimeout(() => { setSuccessModalVisible(false) }, 2500)
+      alert("La edición estará disponible pronto.")
     } catch (error) { alert("Error al guardar") }
   }
 
-  // ELIMINAR
   const confirmDelete = (teacher) => {
     setTeacherToDelete(teacher)
     setDeleteModalVisible(true)
@@ -202,7 +192,7 @@ const AdminTeachers = () => {
   const handleDelete = async () => {
     if (teacherToDelete) {
       try {
-        await axios.delete(`${API_URL}/${teacherToDelete.id}`)
+        await api.delete(`/users/${teacherToDelete.id}`)
         setTeachers(teachers.filter(t => t.id !== teacherToDelete.id))
         setDeleteModalVisible(false)
         setTeacherToDelete(null)
@@ -210,7 +200,6 @@ const AdminTeachers = () => {
     }
   }
 
-  // Obtener color de semestre
   const getSemesterColor = (sem) => {
     const colors = ['primary', 'success', 'info', 'warning', 'danger', 'dark', 'secondary', 'light']
     return colors[(parseInt(sem) - 1) % colors.length] || 'info'
@@ -245,7 +234,6 @@ const AdminTeachers = () => {
         .modal-header-custom .btn-close { filter: invert(1) grayscale(100%) brightness(200%); }
         .bg-box-adaptive { background-color: #f8f9fa; border: 1px solid #dee2e6; }
 
-        /* Dark Mode */
         [data-coreui-theme="dark"] .search-bar-custom .input-group-text { background-color: #2a303d; border-color: #3b4b60; color: #e5e7eb; }
         [data-coreui-theme="dark"] .search-bar-custom .form-control { background-color: #2a303d; border-color: #3b4b60; color: #fff; }
         [data-coreui-theme="dark"] .table { color: #e5e7eb; }
@@ -352,7 +340,6 @@ const AdminTeachers = () => {
         </CCol>
       </CRow>
 
-      {/* --- MODAL AGREGAR DOCENTE --- */}
       <CModal visible={addModalVisible} onClose={() => setAddModalVisible(false)} size="lg" backdrop="static">
         <CModalHeader closeButton className="modal-header-custom">
           <strong><CIcon icon={cilPlus} className="me-2" />Registrar Nuevo Docente</strong>
@@ -416,7 +403,6 @@ const AdminTeachers = () => {
         </CModalFooter>
       </CModal>
 
-      {/* --- MODAL ÉXITO --- */}
       <CModal visible={successModalVisible} alignment="center" className="border-0">
         <CModalBody className="text-center p-5">
           <div className="mb-4 success-icon-anim">
@@ -427,7 +413,6 @@ const AdminTeachers = () => {
         </CModalBody>
       </CModal>
 
-      {/* MODAL EDITAR DOCENTE */}
       <CModal visible={editModalVisible} onClose={() => setEditModalVisible(false)} size="lg" backdrop="static">
         <CModalHeader closeButton className="modal-header-custom"><strong>Editar Docente</strong></CModalHeader>
         <CModalBody className="p-4">
@@ -462,7 +447,6 @@ const AdminTeachers = () => {
         </CModalFooter>
       </CModal>
 
-      {/* MODAL ELIMINAR */}
       <CModal visible={deleteModalVisible} onClose={() => setDeleteModalVisible(false)} alignment="center" backdrop="static">
         <CModalHeader closeButton><strong className="text-danger">Eliminar Docente</strong></CModalHeader>
         <CModalBody className="text-center py-4">
@@ -475,7 +459,6 @@ const AdminTeachers = () => {
           <CButton color="danger" className="text-white" onClick={handleDelete}>Eliminar</CButton>
         </CModalFooter>
       </CModal>
-
     </CContainer>
   )
 }

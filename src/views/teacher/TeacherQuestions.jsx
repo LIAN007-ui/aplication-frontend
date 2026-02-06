@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import axios from 'axios'
+import api from '../../api'
 import {
   CCard,
   CCardBody,
@@ -21,13 +21,12 @@ import CIcon from '@coreui/icons-react'
 import { cilPuzzle, cilCheckCircle, cilTrash, cilCheck } from '@coreui/icons'
 
 const TeacherQuestions = () => {
-  const API_URL = 'http://localhost:3001'
+
 
   const [loading, setLoading] = useState(true)
   const [questions, setQuestions] = useState([])
   const [currentUser, setCurrentUser] = useState(null)
 
-  // Form
   const [newQuestion, setNewQuestion] = useState({
     question: '',
     option1: '',
@@ -40,16 +39,23 @@ const TeacherQuestions = () => {
   const [submitting, setSubmitting] = useState(false)
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('currentUser'))
-    setCurrentUser(user)
-    if (user) {
-      fetchQuestions(user.assignedSemester)
+    const init = async () => {
+        try {
+            const { data: user } = await api.get('/users/profile')
+            setCurrentUser(user)
+            if (user && user.assigned_semester_id) {
+                fetchQuestions(user.assigned_semester_id)
+            }
+        } catch (e) {
+            console.error(e)
+        }
     }
+    init()
   }, [])
 
   const fetchQuestions = async (semester) => {
     try {
-      const res = await axios.get(`${API_URL}/questions?semester=${semester}`)
+      const res = await api.get(`/questions/semester/${semester}`)
       setQuestions(res.data.reverse())
     } catch (error) {
       console.error('Error fetching questions:', error)
@@ -81,11 +87,10 @@ const TeacherQuestions = () => {
         question: newQuestion.question,
         options: options,
         answer: parseInt(newQuestion.answer),
-        semester: currentUser.assignedSemester,
-        teacherId: currentUser.id,
+        semester_id: currentUser.assigned_semester_id
       }
 
-      await axios.post(`${API_URL}/questions`, qData)
+      await api.post(`/questions`, qData)
       setMessage({ type: 'success', text: '¡Pregunta creada exitosamente!' })
       setNewQuestion({
         question: '',
@@ -95,7 +100,7 @@ const TeacherQuestions = () => {
         option4: '',
         answer: '0',
       })
-      fetchQuestions(currentUser.assignedSemester)
+      fetchQuestions(currentUser.assigned_semester_id)
     } catch (error) {
       setMessage({ type: 'danger', text: 'Error al crear la pregunta' })
     } finally {
@@ -107,7 +112,7 @@ const TeacherQuestions = () => {
     if (!window.confirm('¿Estás seguro de eliminar esta pregunta?')) return
     
     try {
-      await axios.delete(`${API_URL}/questions/${id}`)
+      await api.delete(`/questions/${id}`)
       setQuestions(questions.filter(q => q.id !== id))
     } catch (error) {
       console.error('Error deleting:', error)
@@ -139,7 +144,6 @@ const TeacherQuestions = () => {
         }
       `}</style>
 
-      {/* Header */}
       <div className="d-flex justify-content-between align-items-center mb-4">
         <div>
           <h2 className="mb-1 fw-bold">
@@ -147,7 +151,7 @@ const TeacherQuestions = () => {
             Banco de Preguntas
           </h2>
           <span className="text-muted">
-            Crea preguntas para el juego educativo • Semestre {currentUser?.assignedSemester}
+            Crea preguntas para el juego educativo • Semestre {currentUser?.assigned_semester_id}
           </span>
         </div>
         <CBadge color="warning" textColor="dark" className="px-3 py-2 fs-6">
@@ -156,7 +160,6 @@ const TeacherQuestions = () => {
       </div>
 
       <CRow>
-        {/* Form */}
         <CCol lg={5}>
           <CCard className="border-0 shadow-sm sticky-top" style={{ top: '1rem' }}>
             <CCardHeader className="bg-warning text-dark border-0">
@@ -240,7 +243,6 @@ const TeacherQuestions = () => {
           </CCard>
         </CCol>
 
-        {/* Questions List */}
         <CCol lg={7}>
           <h5 className="fw-bold mb-3">Preguntas Creadas</h5>
           

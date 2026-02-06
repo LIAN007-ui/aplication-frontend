@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import axios from 'axios'
+import api from '../../api'
 import {
   CContainer, CCard, CCardBody, CCardHeader, CButton, CProgress, CRow, CCol, CSpinner, CBadge
 } from '@coreui/react'
@@ -7,12 +7,11 @@ import CIcon from '@coreui/icons-react'
 import { cilStar, cilClock, cilList, cilCheck, cilX, cilSmile, cilSad } from '@coreui/icons'
 
 const ModuloJuego = () => {
-  const API_URL_USERS = 'http://localhost:3001/users'
-  const API_URL_QUESTIONS = 'http://localhost:3001/questions'
 
-  const [masterQuestions, setMasterQuestions] = useState([]) // <-- Estado para las preguntas de BD
+
+  const [masterQuestions, setMasterQuestions] = useState([]) 
   const [questions, setQuestions] = useState([])
-  const [gameState, setGameState] = useState('LOADING') // START, PLAYING, RESULT, LOADING
+  const [gameState, setGameState] = useState('LOADING') 
   const [currentIdx, setCurrentIdx] = useState(0)
   const [score, setScore] = useState(0)
   const [timeLeft, setTimeLeft] = useState(30)
@@ -22,42 +21,41 @@ const ModuloJuego = () => {
   const [highScore, setHighScore] = useState(0)
   const [userId, setUserId] = useState(null)
 
-  // 1. CARGAR DATOS (Usuario y Preguntas)
   useEffect(() => {
     const initData = async () => {
       try {
-        // A. Cargar Usuario
-        const storedUserStr = localStorage.getItem('currentUser')
         let userSemester = null
         
-        if (storedUserStr && storedUserStr !== "undefined") {
-          const storedUser = JSON.parse(storedUserStr)
-          if (storedUser && storedUser.id) {
-            setUserId(storedUser.id)
+        try {
+            const { data: userData } = await api.get('/users/profile')
             
-            // Obtener el número del semestre del formato "X° Semestre"
-            if (storedUser.semestre) {
-              const match = storedUser.semestre.match(/(\d+)/)
-              if (match) {
-                userSemester = match[1]
-              }
+            if (userData) {
+                setUserId(userData.id)
+                setHighScore(userData.puntuacion || 0)
+                
+                if (userData.current_semester_id) {
+                    userSemester = userData.current_semester_id
+                }
             }
-            
-            try {
-                const { data } = await axios.get(`${API_URL_USERS}/${storedUser.id}`)
-                setHighScore(data.puntuacion || 0)
-            } catch (err) { console.warn("Error usuario", err) }
-          }
+        } catch (err) { 
+            console.error("Error cargando perfil usuario:", err) 
         }
 
-        // B. Cargar Preguntas de la BD (filtradas por semestre del estudiante)
-        const qResponse = await axios.get(API_URL_QUESTIONS)
-        let filteredQuestions = qResponse.data
-        
-        // Filtrar por semestre si el estudiante tiene uno asignado
-        if (userSemester && qResponse.data) {
-          filteredQuestions = qResponse.data.filter(q => q.semester === userSemester)
+        let qResponse = { data: [] }
+        if (userSemester) {
+             try {
+                qResponse = await api.get(`/questions/semester/${userSemester}`)
+             } catch (e) {
+                console.error("Error cargando preguntas:", e)
+                qResponse = { data: [] }
+             }
         }
+
+        let filteredQuestions = qResponse.data.map(q => ({
+             ...q, 
+             answer: q.correct_answer, 
+             question: q.question_text 
+        }))
         
         if (filteredQuestions && filteredQuestions.length > 0) {
             setMasterQuestions(filteredQuestions)
@@ -73,7 +71,6 @@ const ModuloJuego = () => {
     initData()
   }, [])
 
-  // 2. Temporizador
   useEffect(() => {
     let timer
     if (gameState === 'PLAYING' && !isLocked && timeLeft > 0) {
@@ -84,19 +81,15 @@ const ModuloJuego = () => {
     return () => clearInterval(timer)
   }, [timeLeft, isLocked, gameState])
 
-  // --- Lógica del Juego ---
   const startGame = () => {
     if (masterQuestions.length === 0) return;
 
-    // Seleccionar 10 (o menos si hay pocas) preguntas aleatorias
     const count = Math.min(masterQuestions.length, 10)
     
     const shuffled = [...masterQuestions]
       .sort(() => Math.random() - 0.5)
       .slice(0, count) 
       .map(q => {
-        // La respuesta correcta ya está guardada como texto en q.answer
-        // Solo necesitamos barajar las opciones
         return {
           ...q,
           options: [...q.options].sort(() => Math.random() - 0.5)
@@ -139,7 +132,7 @@ const ModuloJuego = () => {
     setGameState('RESULT')
     if (userId && finalScore > highScore) {
       try {
-        await axios.patch(`${API_URL_USERS}/${userId}`, { puntuacion: finalScore })
+        await api.patch(`/users/${userId}`, { puntuacion: finalScore })
         setHighScore(finalScore)
       } catch (e) { console.error("Error guardando récord", e) }
     }
@@ -168,7 +161,6 @@ const ModuloJuego = () => {
         @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-15px); } 100% { transform: translateY(0px); } }
         .floating-icon { animation: float 3s ease-in-out infinite; }
 
-        /* Ajustes par el modo oscuro */
         .bg-message-adaptive { background-color: #f8f9fa; color: #6c757d; }
         [data-coreui-theme="dark"] .bg-message-adaptive { background-color: #374151; color: #d1d5db; }
       `}</style>
@@ -244,7 +236,6 @@ const ModuloJuego = () => {
                 </CCardBody>
               )}
 
-              {/* ESTADO: NO HACY PREGUNTAS (Visual Amigable) */}
               {gameState === 'NO_QUESTIONS' && (
                   <CCardBody className="d-flex flex-column align-items-center justify-content-center text-center p-5 fade-in" style={{minHeight: '400px'}}>
                       <div className="floating-icon mb-4">

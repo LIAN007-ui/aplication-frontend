@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import axios from 'axios'
+import api from '../../api' 
 import {
   CCard,
   CCardBody,
@@ -9,7 +9,6 @@ import {
   CWidgetStatsF,
   CSpinner,
   CBadge,
-  CProgress,
   CTable,
   CTableBody,
   CTableDataCell,
@@ -32,7 +31,6 @@ import {
 } from '@coreui/icons'
 
 const TeacherDashboard = () => {
-  const API_URL = 'http://localhost:3001'
 
   const [loading, setLoading] = useState(true)
   const [currentUser, setCurrentUser] = useState(null)
@@ -46,43 +44,29 @@ const TeacherDashboard = () => {
 
   const fetchData = async () => {
     try {
-      // Obtener usuario del localStorage
-      const storedUser = localStorage.getItem('currentUser')
-      const user = storedUser ? JSON.parse(storedUser) : null
-      setCurrentUser(user)
+      const profileResponse = await api.get('/users/profile')
+      const teacher = profileResponse.data
       
-      // Obtener todos los usuarios de la API
-      const response = await axios.get(`${API_URL}/users`)
-      const allUsers = response.data
-      
-      // Obtener el semestre asignado al docente
-      let teacherSemester = user?.assignedSemester
-      
-      // Si no está en localStorage, buscarlo en la API
-      if (!teacherSemester && user?.id) {
-        const teacherFromApi = allUsers.find(u => u.id === user.id)
-        teacherSemester = teacherFromApi?.assignedSemester
-      }
-      
-      // Extraer el número del semestre (ej. "8" o "8° Semestre" -> 8)
-      const teacherSemNum = parseInt(String(teacherSemester || '0').match(/\d+/)?.[0] || '0')
-      
-      console.log('📊 DOCENTE - Semestre asignado:', teacherSemNum)
-      
-      // Filtrar solo estudiantes del semestre del docente
-      const filteredStudents = allUsers.filter(u => {
-        if (u.role !== 'student') return false
-        if (!u.semestre) return false
-        
-        // Extraer número del semestre del estudiante (ej. "8° Semestre" -> 8)
-        const studentSemNum = parseInt(String(u.semestre).match(/\d+/)?.[0] || '0')
-        
-        return studentSemNum === teacherSemNum
+      setCurrentUser({
+        ...teacher,
+        name: teacher.full_name, 
+        assignedSemester: teacher.assigned_semester_name || 'Sin asignar'
       })
       
-      console.log('📊 DOCENTE - Estudiantes del semestre', teacherSemNum, ':', filteredStudents.length)
+      const semesterId = teacher.assigned_semester_id
+
+      console.log('📊 DOCENTE - ID Semestre asignado:', semesterId)
       
-      setStudents(filteredStudents)
+      if (semesterId) {
+        const studentsResponse = await api.get(`/users/students/semester/${semesterId}`)
+        const studentList = studentsResponse.data
+        
+        console.log('📊 DOCENTE - Estudiantes cargados:', studentList.length)
+        setStudents(studentList)
+      } else {
+        setStudents([])
+      }
+
     } catch (error) {
       console.error('📊 DOCENTE - Error al cargar:', error)
     } finally {
@@ -90,7 +74,6 @@ const TeacherDashboard = () => {
     }
   }
 
-  // Calculate quiz stats
   const getQuizStats = () => {
     if (students.length === 0) {
       return { average: 0, highest: 0, lowest: 0, passRate: 0, passed: 0, failed: 0 }
@@ -108,19 +91,16 @@ const TeacherDashboard = () => {
     return { average: average.toFixed(1), highest, lowest, passRate: passRate.toFixed(0), passed, failed }
   }
 
-  // Get top performers (Cuadro de Honor) - Muestra los mejores 10 sin importar la nota
   const getTopPerformers = () => {
     return [...students]
       .sort((a, b) => (b.puntuacion || 0) - (a.puntuacion || 0))
       .slice(0, 10)
   }
 
-  // Get students needing improvement
   const getNeedImprovement = () => {
     return students.filter(s => (s.puntuacion || 0) < 5)
   }
 
-  // Score distribution
   const getScoreDistribution = () => {
     const ranges = { '0-2': 0, '3-4': 0, '5-6': 0, '7-8': 0, '9-10': 0 }
     students.forEach(s => {
@@ -134,22 +114,9 @@ const TeacherDashboard = () => {
     return ranges
   }
 
-  // Ordenar estudiantes por puntuación (de mayor a menor)
-  const sortedStudents = [...students].sort((a, b) => (b.puntuacion || 0) - (a.puntuacion || 0))
-
-  // Obtener estado de la nota
-  const getScoreStatus = (score) => {
-    if (score >= 9) return { color: 'success', label: 'Excelente', icon: cilStar }
-    if (score >= 7) return { color: 'info', label: 'Bueno', icon: cilCheckCircle }
-    if (score >= 5) return { color: 'warning', label: 'Regular', icon: cilCheckCircle }
-    return { color: 'danger', label: 'Reprobado', icon: cilXCircle }
-  }
-
   const stats = getQuizStats()
   const topPerformers = getTopPerformers()
-  const needImprovement = getNeedImprovement()
   const distribution = getScoreDistribution()
-  const maxDistribution = Math.max(...Object.values(distribution), 1)
 
   if (loading) {
     return (
@@ -204,43 +171,21 @@ const TeacherDashboard = () => {
         }
         [data-coreui-theme="dark"] .text-muted { color: #9ca3af !important; }
         
-        /* Animación de agua/olas para las barras */
         @keyframes wave {
-          0% {
-            transform: translateX(-100%);
-          }
-          100% {
-            transform: translateX(100%);
-          }
+          0% { transform: translateX(-100%); }
+          100% { transform: translateX(100%); }
         }
-        
         @keyframes flow {
-          0%, 100% {
-            background-position: 0% 50%;
-          }
-          50% {
-            background-position: 100% 50%;
-          }
+          0%, 100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
         }
-        
         @keyframes ripple {
-          0% {
-            transform: scale(1) translateX(-100%);
-            opacity: 0.6;
-          }
-          50% {
-            opacity: 0.3;
-          }
-          100% {
-            transform: scale(1) translateX(100%);
-            opacity: 0.6;
-          }
+          0% { transform: scale(1) translateX(-100%); opacity: 0.6; }
+          50% { opacity: 0.3; }
+          100% { transform: scale(1) translateX(100%); opacity: 0.6; }
         }
-        
         @keyframes growBar {
-          from {
-            width: 0%;
-          }
+          from { width: 0%; }
         }
         
         .animated-bar {
@@ -250,49 +195,29 @@ const TeacherDashboard = () => {
           background-size: 200% 200%;
           animation: growBar 1s ease-out forwards, flow 3s ease infinite;
         }
-        
         .animated-bar::before {
           content: '';
           position: absolute;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background: linear-gradient(
-            90deg,
-            transparent 0%,
-            rgba(255, 255, 255, 0.4) 25%,
-            rgba(255, 255, 255, 0.6) 50%,
-            rgba(255, 255, 255, 0.4) 75%,
-            transparent 100%
-          );
+          top: 0; left: 0; right: 0; bottom: 0;
+          background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.4) 25%, rgba(255, 255, 255, 0.6) 50%, rgba(255, 255, 255, 0.4) 75%, transparent 100%);
           animation: wave 2s linear infinite;
         }
-        
         .animated-bar::after {
           content: '';
           position: absolute;
-          top: -50%;
-          left: -50%;
-          right: -50%;
-          bottom: -50%;
-          background: radial-gradient(
-            ellipse at center,
-            rgba(255, 255, 255, 0.3) 0%,
-            transparent 70%
-          );
+          top: -50%; left: -50%; right: -50%; bottom: -50%;
+          background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.3) 0%, transparent 70%);
           animation: ripple 3s ease-in-out infinite;
         }
       `}</style>
 
-      {/* Header */}
       <CCard className="mb-4 border-0 shadow-sm overflow-hidden">
         <div className="gradient-header text-white p-4">
           <div className="d-flex justify-content-between align-items-center">
             <div>
-              <h2 className="mb-1 fw-bold">Panel de Control - Semestre {currentUser?.assignedSemester}</h2>
+              <h2 className="mb-1 fw-bold">Panel de Control - {currentUser?.assignedSemester}</h2>
               <p className="mb-0 opacity-75">
-                Docente: {currentUser?.name || currentUser?.username || 'Sin nombre'}
+                Docente: {currentUser?.name || 'Cargando...'}
               </p>
             </div>
             <div className="text-end">
@@ -304,9 +229,7 @@ const TeacherDashboard = () => {
         </div>
       </CCard>
 
-      {/* Main Stats */}
       <CRow className="mb-4">
-
         <CCol sm={6} lg={3}>
           <CWidgetStatsF
             className="mb-3 shadow-sm stat-card"
@@ -345,9 +268,7 @@ const TeacherDashboard = () => {
         </CCol>
       </CRow>
 
-      {/* Cuadro de Honor y Distribución */}
       <CRow className="mb-4">
-        {/* Cuadro de Honor */}
         <CCol lg={6}>
           <CCard className="border-0 shadow-sm h-100 honor-card">
             <CCardHeader className="bg-transparent border-0 pb-2">
@@ -359,7 +280,6 @@ const TeacherDashboard = () => {
                     <small className="text-muted">Top estudiantes ordenados por rendimiento</small>
                   </div>
                 </div>
-                {/* Flechas de navegación */}
                 {(() => {
                   const filtered = topPerformers.filter(s => {
                     if (!honorSearch) return true
@@ -395,7 +315,6 @@ const TeacherDashboard = () => {
                   )
                 })()}
               </div>
-              {/* Buscador */}
               <div className="mt-3 position-relative">
                 <CIcon icon={cilSearch} className="position-absolute top-50 translate-middle-y ms-3 text-muted" />
                 <CFormInput
@@ -404,15 +323,13 @@ const TeacherDashboard = () => {
                   value={honorSearch}
                   onChange={(e) => {
                     let value = e.target.value
-                    // Si es solo números, limitar a 8 dígitos (cédula)
                     if (/^\d+$/.test(value)) {
                       value = value.slice(0, 8)
                     } else {
-                      // Si contiene letras, limitar a 40 caracteres (nombre)
                       value = value.slice(0, 40)
                     }
                     setHonorSearch(value)
-                    setHonorPage(0) // Reset to first page on search
+                    setHonorPage(0)
                   }}
                   maxLength={40}
                   style={{ paddingLeft: '2.5rem' }}
@@ -422,7 +339,6 @@ const TeacherDashboard = () => {
             </CCardHeader>
             <CCardBody className="pt-2">
               {(() => {
-                // Filtrar por búsqueda
                 const filteredPerformers = topPerformers.filter(s => {
                   if (!honorSearch) return true
                   const term = honorSearch.toLowerCase()
@@ -494,7 +410,6 @@ const TeacherDashboard = () => {
           </CCard>
         </CCol>
 
-        {/* Distribución de Notas */}
         <CCol lg={6}>
           <CCard className="border-0 shadow-sm h-100">
             <CCardHeader className="bg-transparent border-0">
@@ -553,7 +468,6 @@ const TeacherDashboard = () => {
                 )
               })}
               
-              {/* Resumen */}
               <div className="mt-4 p-3 bg-light rounded-3">
                 <CRow className="text-center">
                   <CCol>
@@ -574,8 +488,6 @@ const TeacherDashboard = () => {
           </CCard>
         </CCol>
       </CRow>
-
-
     </>
   )
 }

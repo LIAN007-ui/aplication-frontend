@@ -1,5 +1,4 @@
-import React, { useState, useEffect } from 'react'
-import axios from 'axios'
+import React, { useEffect, useState } from 'react'
 import {
   CCard,
   CCardBody,
@@ -7,158 +6,162 @@ import {
   CCol,
   CRow,
   CSpinner,
-  CBadge,
-  CListGroup,
-  CListGroupItem,
+  CAlert,
+  CAvatar,
+  CBadge
 } from '@coreui/react'
 import CIcon from '@coreui/icons-react'
-import { cilNotes } from '@coreui/icons'
+import { cilNewspaper, cilUser, cilSchool, cilCalendar } from '@coreui/icons'
+import api from '../../api'
 
-const StudentDashboard = () => {
-  const API_URL = 'http://localhost:3001'
-
-  const [loading, setLoading] = useState(true)
-  const [currentUser, setCurrentUser] = useState(null)
+const Dashboard = () => {
+  const [user, setUser] = useState(null)
   const [publications, setPublications] = useState([])
-  const [forumPosts, setForumPosts] = useState([])
-
-  // Función para extraer el número del semestre del formato "X° Semestre"
-  const extractSemesterNumber = (semestreStr) => {
-    if (!semestreStr) return null
-    const match = semestreStr.match(/(\d+)/)
-    return match ? match[1] : null
-  }
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
-    const user = JSON.parse(localStorage.getItem('currentUser'))
-    setCurrentUser(user)
-    if (user) {
-      // Extraer el número del semestre del formato "8° Semestre"
-      const semesterNumber = extractSemesterNumber(user.semestre)
-      fetchData(semesterNumber)
+    const fetchData = async () => {
+      try {
+        const profileResponse = await api.get('/users/profile')
+        const userData = profileResponse.data
+        
+        setUser(userData)
+        console.log("🎓 Perfil Estudiante Cargado:", userData)
+
+        if (userData.current_semester_id) {
+           console.log(`📡 Buscando noticias para el Semestre ID: ${userData.current_semester_id}`)
+           
+           const newsResponse = await api.get(`/publications/semester/${userData.current_semester_id}`)
+           setPublications(newsResponse.data)
+        } else {
+           console.warn("⚠️ Este estudiante no tiene un 'current_semester_id' asignado en la BD.")
+        }
+
+      } catch (err) {
+        console.error('❌ Error cargando dashboard:', err)
+        setError('No se pudo cargar la información. Verifica tu conexión.')
+      } finally {
+        setLoading(false)
+      }
     }
+
+    fetchData()
   }, [])
-
-  const fetchData = async (semester) => {
-    try {
-      // Get publications for this semester
-      const pubRes = await axios.get(`${API_URL}/publications?semester=${semester}`)
-      setPublications(pubRes.data)
-
-      // Get forum posts for this semester
-      const forumRes = await axios.get(`${API_URL}/forum_posts?semester=${semester}`)
-      setForumPosts(forumRes.data)
-    } catch (error) {
-      console.error('Error fetching data:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
 
   if (loading) {
     return (
-      <div className="text-center py-5">
-        <CSpinner color="primary" />
+      <div className="text-center mt-5">
+        <CSpinner color="primary" variant="grow"/>
+        <p className="mt-2 text-muted">Cargando tu aula virtual...</p>
       </div>
     )
   }
 
   return (
     <>
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <div>
-          <h2>Bienvenido, {currentUser?.nombre || 'Estudiante'}</h2>
-          <p className="text-muted mb-0">{currentUser?.carrera}</p>
+      <CCard className="mb-4 border-top-primary border-top-3 shadow-sm">
+        <CCardBody>
+          <CRow className="align-items-center">
+            <CCol md={2} className="text-center mb-3 mb-md-0">
+              <div className="p-1 border rounded-circle d-inline-block">
+                 {user?.photo_url ? (
+                   <img 
+                      src={user.photo_url} 
+                      alt="Perfil" 
+                      className="rounded-circle" 
+                      style={{width: '80px', height: '80px', objectFit: 'cover'}} 
+                   />
+                 ) : (
+                   <CAvatar color="primary" textColor="white" size="xl">
+                     {user?.first_name ? user.first_name.charAt(0).toUpperCase() : <CIcon icon={cilUser}/>}
+                   </CAvatar>
+                 )}
+              </div>
+            </CCol>
+            <CCol md={10}>
+              <h2 className="text-primary fw-bold">
+                ¡Hola, {user?.first_name} {user?.last_name}!
+              </h2>
+              <div className="d-flex flex-wrap gap-2 align-items-center text-medium-emphasis mb-2">
+                <span>
+                    <CIcon icon={cilSchool} className="me-1" />
+                    {user?.career || 'Ingeniería de Sistemas'}
+                </span>
+                <span>•</span>
+                <CBadge color="info" shape="rounded-pill">
+                    {user?.semester_name || `Semestre ${user?.current_semester_id}`}
+                </CBadge>
+              </div>
+              <p className="small text-muted mb-0">
+                Bienvenido al panel de gestión académica. Aquí encontrarás las últimas novedades exclusivas para tu semestre.
+              </p>
+            </CCol>
+          </CRow>
+        </CCardBody>
+      </CCard>
+
+      {error && <CAlert color="danger">{error}</CAlert>}
+
+      <div className="d-flex align-items-center mb-3">
+        <div className="bg-primary text-white p-2 rounded me-2">
+            <CIcon icon={cilNewspaper} />
         </div>
-        <CBadge color="success" className="fs-6 px-3 py-2">
-          {currentUser?.semestre}
-        </CBadge>
+        <h4 className="mb-0 text-dark">Cartelera Informativa</h4>
       </div>
 
       <CRow>
-        {/* Publications */}
-        <CCol md={8}>
-          <CCard className="mb-4 shadow-sm">
-            <CCardHeader className="d-flex align-items-center">
-              <CIcon icon={cilNotes} className="me-2" />
-              <strong>Publicaciones de mi Semestre</strong>
-            </CCardHeader>
-            <CCardBody>
-              {publications.length > 0 ? (
-                publications.map((pub) => (
-                  <CCard key={pub.id} className="mb-3 border-start border-primary border-4">
-                    <CCardBody>
-                      <h5>{pub.title}</h5>
-                      <p className="mb-2">{pub.content}</p>
-                      <div className="d-flex justify-content-between">
-                        <small className="text-muted">Por: {pub.teacherName}</small>
-                        <small className="text-muted">
-                          {new Date(pub.createdAt).toLocaleDateString('es-VE')}
+        {publications.length > 0 ? (
+          publications.map((news) => (
+            <CCol xs={12} key={news.id} className="mb-4 fade-in">
+              <CCard className="h-100 shadow-sm border-0 hover-effect">
+                <CCardHeader className="bg-white border-bottom-0 pt-3 px-4">
+                  <div className="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h5 className="mb-1 text-dark fw-bold">{news.title}</h5>
+                        <small className="text-primary fw-semibold">
+                            Por: {news.teacher_name || news.author_name || 'Docente'}
                         </small>
+                    </div>
+                    <CBadge color="light" textColor="secondary" className="border">
+                        <CIcon icon={cilCalendar} className="me-1"/>
+                        {new Date(news.created_at).toLocaleDateString()}
+                    </CBadge>
+                  </div>
+                </CCardHeader>
+                <CCardBody className="px-4 pb-4">
+                  {news.mediaUrl && (
+                      <div className="mb-3 rounded overflow-hidden border" style={{maxHeight: '200px'}}>
+                          <img src={news.mediaUrl} alt="Adjunto" style={{width: '100%', objectFit: 'cover'}} />
                       </div>
-                    </CCardBody>
-                  </CCard>
-                ))
-              ) : (
-                <p className="text-center text-muted py-4">
-                  No hay publicaciones para tu semestre aún.
-                </p>
-              )}
-            </CCardBody>
-          </CCard>
-        </CCol>
-
-        {/* Sidebar */}
-        <CCol md={4}>
-          {/* User Info */}
-          <CCard className="mb-4 shadow-sm">
-            <CCardHeader>
-              <strong>Mi Información</strong>
-            </CCardHeader>
-            <CCardBody>
-              <CListGroup flush>
-                <CListGroupItem className="d-flex justify-content-between">
-                  <span>Cédula:</span>
-                  <strong>{currentUser?.cedula}</strong>
-                </CListGroupItem>
-                <CListGroupItem className="d-flex justify-content-between">
-                  <span>Usuario:</span>
-                  <strong>{currentUser?.username}</strong>
-                </CListGroupItem>
-                <CListGroupItem className="d-flex justify-content-between">
-                  <span>Puntuación:</span>
-                  <CBadge color={currentUser?.puntuacion >= 5 ? 'success' : 'danger'}>
-                    {currentUser?.puntuacion || 0} pts
-                  </CBadge>
-                </CListGroupItem>
-              </CListGroup>
-            </CCardBody>
-          </CCard>
-
-          {/* Recent Forum Activity */}
-          <CCard className="shadow-sm">
-            <CCardHeader>
-              <strong>Actividad del Foro</strong>
-            </CCardHeader>
-            <CCardBody>
-              {forumPosts.length > 0 ? (
-                <CListGroup flush>
-                  {forumPosts.slice(0, 5).map((post) => (
-                    <CListGroupItem key={post.id}>
-                      <div className="fw-bold">{post.title}</div>
-                      <small className="text-muted">Por: {post.authorName}</small>
-                    </CListGroupItem>
-                  ))}
-                </CListGroup>
-              ) : (
-                <p className="text-muted text-center mb-0">No hay actividad en el foro</p>
-              )}
-            </CCardBody>
-          </CCard>
-        </CCol>
+                  )}
+                  
+                  <p className="card-text text-secondary" style={{ whiteSpace: 'pre-line', lineHeight: '1.6' }}>
+                    {news.content}
+                  </p>
+                </CCardBody>
+              </CCard>
+            </CCol>
+          ))
+        ) : (
+          <CCol xs={12}>
+            <div className="text-center py-5 bg-light rounded border border-dashed">
+                <CIcon icon={cilNewspaper} size="4xl" className="text-muted mb-3"/>
+                <h5 className="text-muted">No hay noticias recientes</h5>
+                <p className="small text-muted">Tu docente aún no ha publicado anuncios para el Semestre {user?.current_semester_id}.</p>
+            </div>
+          </CCol>
+        )}
       </CRow>
+      
+      <style>{`
+        .fade-in { animation: fadeIn 0.5s ease-in; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .hover-effect { transition: transform 0.2s; }
+        .hover-effect:hover { transform: translateY(-3px); }
+      `}</style>
     </>
   )
 }
 
-export default StudentDashboard
+export default Dashboard

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import axios from 'axios'
+import api from '../../api'
 import {
   CCard,
   CCardBody,
@@ -28,11 +28,10 @@ import {
 } from '@coreui/icons'
 
 const Reports = () => {
-  const API_URL = 'http://localhost:3001'
 
   const [loading, setLoading] = useState(true)
   const [topStudents, setTopStudents] = useState([])
-  const [recentStudents, setRecentStudents] = useState([]) // Almacena TODOS para paginar
+  const [recentStudents, setRecentStudents] = useState([]) 
   const [currentPage, setCurrentPage] = useState(1)
   const itemsPerPage = 7
 
@@ -42,16 +41,13 @@ const Reports = () => {
 
   const fetchData = async () => {
     try {
-      const response = await axios.get(`${API_URL}/users`)
+      const response = await api.get('/users/all')
       const users = response.data
       const students = users.filter((u) => u.role === 'student')
 
-      // Top 5 estudiantes por puntuación
       const sortedByScore = [...students].sort((a, b) => (b.puntuacion || 0) - (a.puntuacion || 0))
       const top5 = sortedByScore.slice(0, 8)
 
-      // Últimos registros (ordenados por recientes primero)
-      // Invertimos el array para que los registros más nuevos (final del array) queden al principio
       const allRecent = [...students].reverse()
 
       setTopStudents(top5)
@@ -72,8 +68,6 @@ const Reports = () => {
     )
   }
 
-
-  // Lógica de Paginación
   const indexOfLastItem = currentPage * itemsPerPage
   const indexOfFirstItem = indexOfLastItem - itemsPerPage
   const currentRecentStudents = recentStudents.slice(indexOfFirstItem, indexOfLastItem)
@@ -83,14 +77,10 @@ const Reports = () => {
     if (page >= 1 && page <= totalPages) setCurrentPage(page)
   }
 
-  // Generar páginas para paginador
   const paginationPages = []
   for (let i = 1; i <= totalPages; i++) {
      paginationPages.push(i)
   }
-
-  // Mostrar un rango limitado de páginas si son muchas (opcional, simple por ahora)
-  // Si son muchas páginas, mostrar un subconjunto sería ideal, pero con "simple" funciona para empezar.
 
   return (
     <>
@@ -109,7 +99,6 @@ const Reports = () => {
       </h2>
 
       <CRow>
-        {/* Top Estudiantes */}
         <CCol lg={6}>
           <CCard className="mb-4 shadow-sm border-0">
             <CCardHeader className="card-header-adaptive border-bottom-0 pt-4 px-4">
@@ -167,7 +156,6 @@ const Reports = () => {
           </CCard>
         </CCol>
 
-        {/* Registros Recientes */}
         <CCol lg={6}>
           <CCard className="mb-4 shadow-sm border-0">
             <CCardHeader className="card-header-adaptive border-bottom-0 pt-4 px-4">
@@ -218,7 +206,6 @@ const Reports = () => {
                 </CTableBody>
               </CTable>
               
-              {/* Controles de Paginación */}
               {totalPages > 1 && (
                   <div className="d-flex justify-content-center py-3 border-top">
                       <CPagination aria-label="Navegación de registros recientes">

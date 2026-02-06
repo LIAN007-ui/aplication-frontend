@@ -16,7 +16,8 @@ import LoadingOverlay from '../../../components/LoadingOverlay/LoadingOverlay'
 
 const Register = () => {
   const navigate = useNavigate()
-  const API_URL = 'http://localhost:3001/users'
+  // CAMBIO: Apuntamos al backend real en el puerto 5000
+  const API_URL = 'http://localhost:5000/api/auth/register'
 
   const [nombre, setNombre] = useState('')
   const [apellido, setApellido] = useState('')
@@ -88,46 +89,33 @@ const Register = () => {
     }
 
     try {
-      // Verificar duplicados en el servidor
-      const { data: userCheck } = await axios.get(`${API_URL}?username=${username}`)
-      const { data: allUsers } = await axios.get(API_URL)
-      
-      // Verificar si el username ya existe
-      if (userCheck.length > 0) {
-        triggerError('El usuario ya existe')
-        return
-      }
-      
-      // Verificar si la cédula ya existe (comparación exacta)
-      const cedulaExists = allUsers.some(user => user.cedula === cedula)
-      if (cedulaExists) {
-        triggerError('Esta cédula ya está registrada')
-        return
+      // CAMBIO: Lógica para enviar datos al Backend Real (Express + SQLite)
+
+      // Mapeamos tus variables a lo que espera el backend
+      const payload = {
+        username: username,
+        email: email,
+        password: password,
+        role: 'student', // Este formulario es exclusivo de Estudiantes
+        // Datos del perfil
+        first_name: nombre,
+        last_name: apellido,
+        cedula: cedula,
+        career: carrera,
+        current_semester_id: parseInt(semestre) // Convertimos "1" a numero entero
       }
 
-      // Crear usuario con TODOS los datos para el perfil
-      const newUser = {
-        id: Date.now().toString(), // Generamos ID único
-        nombre,
-        apellido,
-        cedula,
-        username,
-        email,
-        semestre: `${semestre}° Semestre`,
-        carrera,
-        password,
-        role: 'student',
-        foto: null
-      }
-      
-      await axios.post(API_URL, newUser)
+      // Enviamos la petición POST directa al endpoint de registro
+      await axios.post(API_URL, payload)
 
       setIsNavigating(true)
       setTimeout(() => navigate('/login'), 1000)
-      
+
     } catch (err) {
       console.error(err)
-      triggerError('Error conectando con el servidor')
+      // Capturamos el error que viene del backend (ej: "Usuario ya existe")
+      const errorMsg = err.response?.data?.error || 'Error conectando con el servidor'
+      triggerError(errorMsg)
     }
   }
 
@@ -137,6 +125,7 @@ const Register = () => {
     setTimeout(() => setIsShaking(false), 500)
   }
 
+  // EL RENDER SE MANTIENE EXACTAMENTE IGUAL
   return (
     <>
       <style>
@@ -287,11 +276,11 @@ const Register = () => {
                           onChange={(e) => setCarrera(e.target.value)}
                         >
                           <option value="">Seleccionar carrera...</option>
-                          <option value="Sistemas">Ingeniería de Sistemas</option>
-                          <option value="Civil">Ingeniería Civil</option>
-                          <option value="Administración">Ingeniería Eléctrica</option>
-                          <option value="Mecánica">Licenciatura en turismo</option>
-                          <option value="Eléctrica">Licenciatura en Administración</option>
+                          <option value="Ingeniería de Sistemas">Ingeniería de Sistemas</option>
+                          <option value="Ingeniería Civil">Ingeniería Civil</option>
+                          <option value="Ingeniería Eléctrica">Ingeniería Eléctrica</option>
+                          <option value="Licenciatura en Turismo">Licenciatura en Turismo</option>
+                          <option value="Licenciatura en Administración">Licenciatura en Administración</option>
                         </CFormSelect>
                       </CCol>
                     </CRow>
