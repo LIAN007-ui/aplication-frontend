@@ -13,6 +13,7 @@ import {
   CRow,
 } from '@coreui/react'
 import LoadingOverlay from '../../../components/LoadingOverlay/LoadingOverlay'
+import img from '../../../assets/images/unefa.jpg'
 
 const Register = () => {
   const navigate = useNavigate()
@@ -145,7 +146,7 @@ const Register = () => {
             padding: 40px 0;
           }
           .background-landscape {
-            background-image: url('src/assets/images/unefa.jpg');
+            background-image: url(${img});
             background-size: cover;
             background-position: center;
             position: fixed;

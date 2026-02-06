@@ -38,7 +38,7 @@ const Login = () => {
     }
 
     try {
-      const response = await axios.post(API_URL+"/api/auth/login", {
+      const response = await axios.post(API_URL + "/api/auth/login", {
         identifier: username,
         password: password
       })
@@ -114,7 +114,7 @@ const Login = () => {
             overflow: hidden;
           }
           .background-landscape {
-            background-image: 'url(${img})';
+            background-image: url(${img});
             background-size: cover;
             background-position: center;
             position: absolute;
