@@ -17,7 +17,7 @@ import TeacherLoginModal from '../../../components/auth/TeacherLoginModal'
 import img from '../../../assets/images/unefa.jpg'
 const Login = () => {
   const navigate = useNavigate()
-  const API_URL = 'http://localhost:5000/api/auth/login'
+  const API_URL = 'https://aplication-backend-mkdg.onrender.com'
 
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')

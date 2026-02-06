@@ -26,7 +26,7 @@ import CIcon from '@coreui/icons-react'
 import { cilSearch, cilUser, cilPeople, cilChevronLeft, cilChevronRight } from '@coreui/icons'
 
 const TeacherStudents = () => {
-  const API_URL = 'http://localhost:3001'
+  const API_URL = 'https://aplication-backend-mkdg.onrender.com'
 
   const [loading, setLoading] = useState(true)
   const [students, setStudents] = useState([])

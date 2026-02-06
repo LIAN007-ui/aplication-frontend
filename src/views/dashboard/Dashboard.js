@@ -31,7 +31,7 @@ import {
 } from '@coreui/icons'
 
 const Dashboard = () => {
-  const API_URL = 'http://localhost:3001/users'
+  const API_URL = 'https://aplication-backend-mkdg.onrender.com/users'
   
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState({

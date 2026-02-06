@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: 'http://localhost:5000/api', // Apunta a tu servidor Express
+    baseURL: 'https://aplication-backend-mkdg.onrender.com/api', // Apunta a tu servidor Express
 });
 
 // Enviar token en cada petición

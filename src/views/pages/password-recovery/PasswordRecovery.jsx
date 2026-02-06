@@ -8,7 +8,7 @@ import CIcon from '@coreui/icons-react'
 import { cilUser, cilEnvelopeClosed, cilLockLocked } from '@coreui/icons'
 
 const PasswordRecovery = ({ visible, onClose }) => {
-  const API_URL = 'http://localhost:5000/api/auth'
+  const API_URL = 'https://aplication-backend-mkdg.onrender.com'
 
   const [step, setStep] = useState(1) 
   const [loading, setLoading] = useState(false)
