@@ -12,7 +12,7 @@ import {
 } from '@coreui/react'
 
 import { AppSidebarNav } from './AppSidebarNav'
-
+import img from '../assets/images/logo.png'
 // Importamos las configuraciones de navegación por rol
 import { adminNav, teacherNav, studentNav } from '../_nav'
 
@@ -77,7 +77,7 @@ const AppSidebar = () => {
         <CSidebarBrand to="/" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', width: '100%' }}>
           {/* LOGO UNEFA */}
           <CImage
-            src="src/assets/images/logo.png"
+            src={img}
             style={{ display: 'block', margin: '0 auto', height: 150, objectFit: 'contain' }}
           />
         </CSidebarBrand>
