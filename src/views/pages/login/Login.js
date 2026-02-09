@@ -121,6 +121,7 @@ const Login = () => {
             top: 0; left: 0; right: 0; bottom: 0;
             opacity: 0.35;
             z-index: 1;
+            pointer-events: none;
           }
           .glass-panel {
             background: rgba(255, 255, 255, 0.2) !important;
@@ -235,19 +236,31 @@ const Login = () => {
                       ENTRAR
                     </CButton>
 
-                    <div className="text-center text-white small fw-bold" style={{ textShadow: '1px 1px 3px black' }}>
+                    <div className="text-center text-white fw-bold" style={{ textShadow: '1px 1px 3px black', position: 'relative', zIndex: 5 }}>
                       ¿No tienes cuenta?{' '}
-                      <a
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault()
+                      <button
+                        type="button"
+                        onClick={() => {
                           setIsNavigating(true)
                           setTimeout(() => navigate('/register'), 700)
                         }}
-                        className="text-white text-decoration-underline"
+                        className="text-white text-decoration-underline fw-bold"
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: 'inherit',
+                          padding: '10px 4px',
+                          minHeight: '44px',
+                          minWidth: '44px',
+                          touchAction: 'manipulation',
+                          WebkitTapHighlightColor: 'transparent',
+                          position: 'relative',
+                          zIndex: 5,
+                        }}
                       >
                         Regístrate
-                      </a>
+                      </button>
                     </div>
 
                     {error && (

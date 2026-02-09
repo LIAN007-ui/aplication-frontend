@@ -153,6 +153,7 @@ const Register = () => {
             top: 0; left: 0; right: 0; bottom: 0;
             opacity: 0.35;
             z-index: 1;
+            pointer-events: none;
           }
           .glass-panel {
             background: rgba(255, 255, 255, 0.2) !important;
@@ -332,19 +333,29 @@ const Register = () => {
                       REGISTRARSE EN LA RED
                     </CButton>
 
-                    <div className="text-center mt-3 text-white fw-bold">
+                    <div className="text-center mt-3 text-white fw-bold" style={{ position: 'relative', zIndex: 5 }}>
                       ¿Ya tienes cuenta?{' '}
-                      <a
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault()
+                      <button
+                        type="button"
+                        onClick={() => {
                           setIsNavigating(true)
                           setTimeout(() => navigate('/login'), 700)
                         }}
-                        className="text-white text-decoration-underline"
+                        className="text-white text-decoration-underline fw-bold"
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          cursor: 'pointer',
+                          fontSize: 'inherit',
+                          padding: '10px 4px',
+                          minHeight: '44px',
+                          minWidth: '44px',
+                          touchAction: 'manipulation',
+                          WebkitTapHighlightColor: 'transparent',
+                        }}
                       >
                         Inicia Sesión
-                      </a>
+                      </button>
                     </div>
 
                     {error && (
