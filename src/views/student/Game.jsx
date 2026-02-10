@@ -165,7 +165,7 @@ const ModuloJuego = () => {
 
     if (userId && finalScore > highScore) {
       try {
-        await api.patch(`/users/${userId}`, { puntuacion: finalScore })
+        await api.put(`/users/${userId}`, { score: finalScore })
         setHighScore(finalScore)
       } catch (e) { console.error("Error guardando récord", e) }
     }
