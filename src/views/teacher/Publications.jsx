@@ -147,24 +147,18 @@ const Publications = () => {
         return
     }
 
-    const formData = new FormData();
-    formData.append('title', currentPost.title);
-    formData.append('content', currentPost.content);
-    formData.append('semester_id', teacherProfile?.assigned_semester_id);
-    
-    if (currentPost.fileRaw) {
-        formData.append('file', currentPost.fileRaw);
-    }
+    const payload = {
+        title: currentPost.title,
+        content: currentPost.content,
+        semester_id: teacherProfile?.assigned_semester_id,
+        file_data: currentPost.mediaUrl || null
+    };
 
     try {
         if (isEditing) {
-             await api.put(`/publications/${currentPost.id}`, formData, {
-                 headers: { 'Content-Type': 'multipart/form-data' }
-             })
+             await api.put(`/publications/${currentPost.id}`, payload)
         } else {
-            await api.post('/publications', formData, {
-                headers: { 'Content-Type': 'multipart/form-data' }
-            })
+            await api.post('/publications', payload)
         }
         
         setModalVisible(false)
@@ -291,7 +285,7 @@ const Publications = () => {
                                             <div className="d-flex align-items-center">
                                                 <div className="me-3 bg-light border d-flex align-items-center justify-content-center rounded overflow-hidden shadow-sm" style={{width: '60px', height: '60px', flexShrink: 0}}>
                                                     {item.mediaUrl ? (
-                                                        item.mediaUrl.startsWith('data:image') ? 
+                                                        (item.mediaUrl.startsWith('data:image') || item.mediaUrl.match(/\.(jpeg|jpg|png|gif|webp)$/i)) ? 
                                                             <img src={item.mediaUrl} alt="Img" style={{width: '100%', height: '100%', objectFit: 'cover'}} /> 
                                                             : <CIcon icon={cilFile} size="xl" className="text-info"/>
                                                     ) : (
@@ -371,7 +365,7 @@ const Publications = () => {
             <div className="bg-box-adaptive p-3 rounded d-flex align-items-center">
                 <div className="me-3 bg-white border d-flex align-items-center justify-content-center rounded overflow-hidden shadow-sm" style={{width: '100px', height: '100px', cursor: 'pointer', flexShrink: 0}} onClick={() => fileInputRef.current.click()}>
                     {currentPost.mediaUrl ? (
-                         currentPost.mediaUrl.startsWith('data:image') ? 
+                         (currentPost.mediaUrl.startsWith('data:image') || currentPost.mediaUrl.match(/\.(jpeg|jpg|png|gif|webp)$/i)) ? 
                             <img src={currentPost.mediaUrl} alt="Preview" style={{width: '100%', height: '100%', objectFit: 'cover'}}/>
                             : <CIcon icon={cilFile} size="3xl" className="text-info"/>
                     ) : (

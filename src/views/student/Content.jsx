@@ -71,15 +71,31 @@ const ModuloUsuarios = () => {
         let tipo = 'texto';
 
         if (fileUrl) {
-            const lowerUrl = fileUrl.toLowerCase();
-            if (lowerUrl.match(/\.(jpeg|jpg|png|gif|webp)$/)) {
-                tipo = 'imagen';
-            } else if (lowerUrl.includes('.pdf')) {
-                tipo = 'pdf';
-            } else if (lowerUrl.match(/\.(doc|docx)$/)) {
-                tipo = 'word';
+            if (fileUrl.startsWith('data:')) {
+                // Base64 data URI — detect type from MIME
+                const mimeMatch = fileUrl.match(/^data:([^;]+);/);
+                const mime = mimeMatch ? mimeMatch[1].toLowerCase() : '';
+                if (mime.startsWith('image/')) {
+                    tipo = 'imagen';
+                } else if (mime === 'application/pdf') {
+                    tipo = 'pdf';
+                } else if (mime.includes('word') || mime.includes('document')) {
+                    tipo = 'word';
+                } else {
+                    tipo = 'pdf';
+                }
             } else {
-                tipo = 'pdf'; 
+                // Regular URL — detect type from extension
+                const lowerUrl = fileUrl.toLowerCase();
+                if (lowerUrl.match(/\.(jpeg|jpg|png|gif|webp)$/)) {
+                    tipo = 'imagen';
+                } else if (lowerUrl.includes('.pdf')) {
+                    tipo = 'pdf';
+                } else if (lowerUrl.match(/\.(doc|docx)$/)) {
+                    tipo = 'word';
+                } else {
+                    tipo = 'pdf'; 
+                }
             }
         }
 
@@ -156,9 +172,24 @@ const ModuloUsuarios = () => {
 
   const handleDownload = () => {
     if (!archivoSeleccionado || !archivoSeleccionado.url) return
+    const url = archivoSeleccionado.url
     const link = document.createElement('a')
-    link.href = archivoSeleccionado.url
-    link.download = archivoSeleccionado.titulo || 'archivo'
+    link.href = url
+
+    // Determine file extension from Base64 MIME or URL
+    let filename = archivoSeleccionado.titulo || 'archivo'
+    if (url.startsWith('data:')) {
+      const mimeMatch = url.match(/^data:([^;]+);/)
+      const mime = mimeMatch ? mimeMatch[1] : ''
+      if (mime.includes('pdf')) filename += '.pdf'
+      else if (mime.includes('png')) filename += '.png'
+      else if (mime.includes('jpeg') || mime.includes('jpg')) filename += '.jpg'
+      else if (mime.includes('gif')) filename += '.gif'
+      else if (mime.includes('webp')) filename += '.webp'
+      else if (mime.includes('word') || mime.includes('document')) filename += '.docx'
+    }
+
+    link.download = filename
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -196,6 +227,20 @@ const ModuloUsuarios = () => {
         )
       case 'pdf':
         {
+          if (url && url.startsWith('data:')) {
+            // Base64 PDF — use embed tag
+            return (
+              <div>
+                <div className="d-flex justify-content-end mb-2 gap-2">
+                  <CButton size="sm" color="light" onClick={enterFullscreen}><CIcon icon={cilFullscreen} /></CButton>
+                </div>
+                <div ref={viewerRef} className="bg-white rounded border" style={{ minHeight: '70vh' }}>
+                  <embed src={url} type="application/pdf" width="100%" style={{ height: '70vh' }} />
+                </div>
+              </div>
+            )
+          }
+          // Regular URL PDF
           const zoomParam = zoom === 'page-width' ? 'page-width' : zoom
           const iframeSrc = `${url}#toolbar=0&zoom=${zoomParam}`
           return (
