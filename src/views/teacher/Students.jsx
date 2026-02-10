@@ -45,7 +45,8 @@ import {
   cilBook,       
   cilLockLocked, 
   cilXCircle,     
-  cilCheckCircle 
+  cilCheckCircle,
+  cilLoopCircular
 } from '@coreui/icons'
 
 const Users = () => {
@@ -82,6 +83,9 @@ const Users = () => {
   const [editModalVisible, setEditModalVisible] = useState(false)
   const [addModalVisible, setAddModalVisible] = useState(false)
   const [successModalVisible, setSuccessModalVisible] = useState(false)
+  const [resetModalVisible, setResetModalVisible] = useState(false)
+  const [resetSuccessVisible, setResetSuccessVisible] = useState(false)
+  const [studentToReset, setStudentToReset] = useState(null)
 
   const [userToDelete, setUserToDelete] = useState(null)
   const [userToEdit, setUserToEdit] = useState({})
@@ -335,6 +339,25 @@ const Users = () => {
     }
   }
 
+  const openResetModal = (student) => {
+    setStudentToReset(student)
+    setResetModalVisible(true)
+  }
+
+  const handleResetAttempts = async () => {
+    if (!studentToReset) return
+    try {
+      const semId = teacherSemId || studentToReset.semestre_id
+      await api.post('/quiz-attempts/reset', { user_id: studentToReset.id, semester_id: semId })
+      setResetModalVisible(false)
+      setStudentToReset(null)
+      setResetSuccessVisible(true)
+      setTimeout(() => setResetSuccessVisible(false), 2500)
+    } catch (error) {
+      alert('Error al resetear intentos: ' + (error.response?.data?.error || 'Error desconocido'))
+    }
+  }
+
   return (
     <CContainer fluid>
       <style>{`
@@ -474,6 +497,7 @@ const Users = () => {
                           </CTableDataCell>
                           <CTableDataCell className="text-end pe-4">
                             <div className="d-flex gap-2 justify-content-end">
+                                <CButton color="warning" variant="ghost" size="sm" title="Dar otra oportunidad en el Quiz" onClick={() => openResetModal(item)}><CIcon icon={cilLoopCircular} /></CButton>
                                 <CButton color="info" variant="ghost" size="sm" onClick={() => openEditModal(item)}><CIcon icon={cilPencil} /></CButton>
                                 <CButton color="danger" variant="ghost" size="sm" onClick={() => confirmDelete(item)}><CIcon icon={cilTrash} /></CButton>
                             </div>
@@ -706,6 +730,31 @@ const Users = () => {
             <CButton color="secondary" onClick={() => setDeleteModalVisible(false)}>Cancelar</CButton>
             <CButton color="danger" className="text-white" onClick={handleDelete}>Eliminar</CButton>
         </CModalFooter>
+      </CModal>
+
+      <CModal visible={resetModalVisible} onClose={() => setResetModalVisible(false)} alignment="center" backdrop="static">
+        <CModalHeader closeButton>
+          <strong className="text-warning">🔄 Dar Otra Oportunidad</strong>
+        </CModalHeader>
+        <CModalBody className="text-center py-4">
+          <div style={{ fontSize: '3rem' }} className="mb-3">❤️</div>
+          <p>¿Otorgar otra oportunidad a <strong>{studentToReset?.nombre} {studentToReset?.apellido}</strong> para intentar el quiz nuevamente?</p>
+          <p className="text-muted small">Sus intentos serán reseteados a 0.</p>
+        </CModalBody>
+        <CModalFooter className="modal-footer-adaptive">
+          <CButton color="secondary" onClick={() => setResetModalVisible(false)}>Cancelar</CButton>
+          <CButton color="warning" className="text-white fw-bold" onClick={handleResetAttempts}>
+            <CIcon icon={cilLoopCircular} className="me-2" />Dar Oportunidad
+          </CButton>
+        </CModalFooter>
+      </CModal>
+
+      <CModal visible={resetSuccessVisible} alignment="center" className="border-0">
+        <CModalBody className="text-center p-5">
+          <div className="mb-4 success-icon-anim" style={{ fontSize: '4rem' }}>❤️</div>
+          <h2 className="fw-bold text-warning mb-2">¡Oportunidad Otorgada!</h2>
+          <p className="text-muted">El estudiante puede intentar el quiz nuevamente.</p>
+        </CModalBody>
       </CModal>
       
     </CContainer>
