@@ -1,15 +1,13 @@
 import axios from 'axios';
 
 const api = axios.create({
-    baseURL: 'https://aplication-backend-mkdg.onrender.com/api', // Apunta a tu servidor Express
+    baseURL: 'https://aplication-backend-mkdg.onrender.com/api',
 });
 
 // Enviar token en cada petición
 api.interceptors.request.use((config) => {
-    // Intentamos obtener el token directamente
     const token = localStorage.getItem('token');
 
-    // O si está dentro del objeto currentUser de CoreUI template (a veces pasa)
     const storedUser = localStorage.getItem('currentUser');
 
     if (token) {
@@ -25,5 +23,26 @@ api.interceptors.request.use((config) => {
 
     return config;
 });
+
+// Interceptor de RESPUESTA: si el backend devuelve 401, cerrar sesión automáticamente
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        if (error.response && error.response.status === 401) {
+            // Token expirado o inválido → limpiar sesión y redirigir al login
+            localStorage.removeItem('isAuthenticated');
+            localStorage.removeItem('token');
+            localStorage.removeItem('userRole');
+            localStorage.removeItem('currentUser');
+
+            // Redirigir al login (funciona con HashRouter)
+            if (!window.location.hash.includes('/login')) {
+                window.location.hash = '#/login';
+                window.location.reload();
+            }
+        }
+        return Promise.reject(error);
+    }
+);
 
 export default api;

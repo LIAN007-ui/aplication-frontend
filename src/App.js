@@ -19,6 +19,7 @@ const Page403 = React.lazy(() => import('./views/pages/page403/Page403'))
 const Page500 = React.lazy(() => import('./views/pages/page500/Page500'))
 
 import PrivateRoute from './components/PrivateRoute'
+import SessionManager from './components/SessionManager'
 
 const App = () => {
   const { isColorModeSet, setColorMode } = useColorModes('coreui-free-react-admin-template-theme')
@@ -40,6 +41,7 @@ const App = () => {
 
   return (
     <HashRouter>
+      <SessionManager />
       <Suspense
         fallback={
           <div className="pt-3 text-center">
