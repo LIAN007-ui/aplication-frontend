@@ -104,12 +104,12 @@ const UsersManagement = () => {
                       </CBadge>
                     </CTableDataCell>
                     <CTableDataCell>
-                        <div className="fw-bold">{u.name}</div>
+                        <div className="fw-bold">{u.nombre || u.username}</div>
                         <small className="text-muted">{u.username}</small>
                     </CTableDataCell>
                     <CTableDataCell>
-                        {u.role === 'teacher' && u.assignedSemester ? `Prof. Semestre ${u.assignedSemester}` : ''}
-                        {u.role === 'student' && u.semestre_id ? `Semestre ${u.semestre_id}` : ''}
+                        {u.role === 'teacher' && u.semestre ? `Prof. ${u.semestre}` : ''}
+                        {u.role === 'student' && u.semestre ? u.semestre : ''}
                     </CTableDataCell>
                     <CTableDataCell>{u.email}</CTableDataCell>
                     <CTableDataCell>

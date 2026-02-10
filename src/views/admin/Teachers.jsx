@@ -78,7 +78,10 @@ const AdminTeachers = () => {
   const fetchTeachers = async () => {
     try {
       const response = await api.get('/users/all')
-      const teachersList = response.data.filter(u => u.role === 'teacher')
+      const teachersList = response.data.filter(u => u.role === 'teacher').map(t => ({
+        ...t,
+        name: t.nombre || t.full_name || t.username || 'Sin nombre'
+      }))
       setTeachers(teachersList)
     } catch (error) {
       console.error('Error cargando docentes:', error)
@@ -291,10 +294,14 @@ const AdminTeachers = () => {
                         <CTableRow key={teacher.id}>
                           <CTableDataCell className="ps-4 py-3">
                             <div className="d-flex align-items-center">
-                              <CAvatar src={teacher.photo} color="info" textColor="white" size="md" className="me-3">
-                                {teacher.photo ? null : (teacher.name ? teacher.name.charAt(0).toUpperCase() : 'D')}
-                              </CAvatar>
-                              <div className="fw-bold">{teacher.name || 'Sin nombre'}</div>
+                              <div className="me-3 d-flex align-items-center justify-content-center rounded-circle shadow-sm" style={{
+                                width: '42px', height: '42px', flexShrink: 0,
+                                background: `linear-gradient(135deg, ${['#3b82f6','#10b981','#06b6d4','#f59e0b','#ef4444','#8b5cf6','#6b7280','#ec4899'][((teacher.semestre_id || 1) - 1) % 8]}, ${['#2563eb','#059669','#0891b2','#d97706','#dc2626','#7c3aed','#4b5563','#db2777'][((teacher.semestre_id || 1) - 1) % 8]})`,
+                                color: 'white', fontWeight: '800', fontSize: '1.1rem'
+                              }}>
+                                {teacher.semestre_id || '?'}
+                              </div>
+                              <div className="fw-bold">{teacher.name}</div>
                             </div>
                           </CTableDataCell>
                           <CTableDataCell>
@@ -305,11 +312,11 @@ const AdminTeachers = () => {
                           </CTableDataCell>
                           <CTableDataCell className="text-center">
                             <CBadge 
-                              color={getSemesterColor(teacher.assignedSemester)} 
+                              color={getSemesterColor(teacher.semestre_id)} 
                               shape="rounded-pill" 
                               className="px-3 py-2 fs-6"
                             >
-                              {teacher.assignedSemester}° Semestre
+                              {teacher.semestre || `Semestre ${teacher.semestre_id}`}
                             </CBadge>
                           </CTableDataCell>
                           <CTableDataCell className="text-end pe-4">
@@ -372,7 +379,7 @@ const AdminTeachers = () => {
               <CInputGroup>
                 <CInputGroupText><CIcon icon={cilBook} /></CInputGroupText>
                 <CFormSelect name="assignedSemester" value={newTeacher.assignedSemester} onChange={handleAddChange} invalid={!!errors.assignedSemester}>
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (<option key={num} value={num}>{num}° Semestre</option>))}
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (<option key={num} value={num}>Semestre {num}</option>))}
                 </CFormSelect>
               </CInputGroup>
               {errors.assignedSemester && <div className="error-msg"><CIcon icon={cilXCircle} size="sm" className="me-1" />{errors.assignedSemester}</div>}
@@ -436,7 +443,7 @@ const AdminTeachers = () => {
             <CCol md={6}>
               <CFormLabel>Semestre Asignado</CFormLabel>
               <CFormSelect name="assignedSemester" value={teacherToEdit.assignedSemester || '1'} onChange={handleEditChange}>
-                {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (<option key={num} value={num}>{num}° Semestre</option>))}
+                {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (<option key={num} value={num}>Semestre {num}</option>))}
               </CFormSelect>
             </CCol>
           </CRow>
